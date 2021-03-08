@@ -1,0 +1,3 @@
+[submodule "aruco_detector"]
+	path = aruco_detector
+	url = git@github.com:AerialRobotics-IITK/aruco_detector.git
