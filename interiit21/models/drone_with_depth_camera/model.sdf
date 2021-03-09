@@ -66,7 +66,8 @@
       <pointCloudTopicName>depth/points</pointCloudTopicName>
       <frameName>camera_link_optical</frameName>
       <pointCloudCutoff>0.4</pointCloudCutoff>
-      <pointCloudCutoffMax>3.0</pointCloudCutoffMax>
+      <!-- <pointCloudCutoffMax>3.0</pointCloudCutoffMax>  -->
+      <pointCloudCutoffMax>30.0</pointCloudCutoffMax> 
       <distortionK1>0.0</distortionK1>
       <distortionK2>0.0</distortionK2>
       <distortionK3>0.0</distortionK3>
@@ -92,6 +93,13 @@
           <lower>0</lower>
         </limit>
       </axis>
+    </joint>
+
+    <link name="camera_link_optical" />
+    <joint name="depth_cam_link" type="fixed">
+      <parent>depth_cam_link</parent>
+      <child>camera_link_optical</child>
+      <pose>0 0 0 -1.57 0 -1.57</pose>
     </joint>
  
 
