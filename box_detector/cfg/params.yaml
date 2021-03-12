@@ -1,0 +1,11 @@
+h_min: 0                 # minimum h value
+s_min: 0                 # minimum s value
+v_min: 168               # minimum v value
+h_max: 172               # maximum h value
+s_max: 111               # maximum s value
+v_max: 255               # maximum v value
+canny_lower: 200         # lower canny threshold
+canny_upper: 300         # higher canny threshold
+canny_ker: 3
+min_contour_area: 600    # Got by hit and trial method
+verbose: true
