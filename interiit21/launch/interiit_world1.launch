@@ -32,6 +32,7 @@
 	</include>
 
 	<!--added a standalone tf node to correct the point cloud orientation in rviz-->
-	<node pkg="tf" type="static_transform_publisher" name="" args="0 0 0 0 0 -1.57 camera_link_optical iris::base_link 100" />
+	<node pkg="tf" type="static_transform_publisher" name="" args="0 0 0 0 0 1.57 base_link camera_link_optical 100" />
+	<node pkg="tf" type="static_transform_publisher" name="" args="0 0 0 0 0 0 map base_link 100" />
 	
 </launch>
