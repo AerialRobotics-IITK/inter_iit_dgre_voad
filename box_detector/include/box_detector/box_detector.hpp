@@ -7,6 +7,9 @@
 
 #include <box_detector/libbox_detection.hpp>
 #include <detector_msgs/Centre.h>
+#include <opencv2/aruco.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace interiit21::box_detection {
 
