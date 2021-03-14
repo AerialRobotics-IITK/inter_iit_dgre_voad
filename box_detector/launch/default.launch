@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
-    <include file="$(find interiit21)/launch/interiit_world1.launch">
-    </include>
+    <!-- <include file="$(find interiit21)/launch/interiit_world1.launch">
+    </include> -->
 
     <node pkg="box_detector" type="box_detector_node" name="box_detector_node" output="screen">
         <rosparam file="$(find box_detector)/cfg/params.yaml" />
-        <remap from="image_raw"    to="camera/color/image_raw" />
+        <remap from="image_raw"    to="/quadrotor/camera/image_raw" />
     </node>
 
 </launch>

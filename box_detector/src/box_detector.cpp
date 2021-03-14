@@ -31,20 +31,27 @@ void BoxDetectorNode::init(ros::NodeHandle& nh) {
     centre_pub_ = nh_private.advertise<detector_msgs::Centre>("centre_coord", 10);
     thresh_pub_ = nh_private.advertise<sensor_msgs::Image>("thresh_img", 10);
     contour_pub_ = nh_private.advertise<sensor_msgs::Image>("contours", 10);
+
+    centre_.x = -1;
+    centre_.y = -1;
 }
 
 void BoxDetectorNode::run() {
+    detectArucoMarker();
+    calculateCentre();
+    centre_pub_.publish(centre_);
+}
+
+void BoxDetectorNode::detectArucoMarker() {
     if (img_.empty()) {
         return;
     };
 
-    std::vector<int> markerIds;
-    std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
     cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_1000);
-    cv::aruco::detectMarkers(inputImage, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
+    cv::aruco::detectMarkers(img_, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
 
-    cv::Mat outputImage = inputImage.clone();
+    outputImage = img_.clone();
     cv::aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds);
 
     // detect_.thresholdImage(img_);
@@ -68,6 +75,36 @@ void BoxDetectorNode::run() {
     // thresh_pub_.publish(thresh_msg);
     contour_pub_.publish(contour_msg);
     // centre_pub_.publish(centre_coord_);
+}
+
+void BoxDetectorNode::calculateCentre() {
+    for (int i = 0; i < markerIds.size(); i++) {
+        if (markerIds[i] != 0)
+            continue;
+        if (markerIds[i] == 0) {
+            centre_.x = (markerCorners[i][0].x + markerCorners[i][1].x + markerCorners[i][2].x + markerCorners[i][3].x) / 4;
+            centre_.y = (markerCorners[i][0].y + markerCorners[i][1].y + markerCorners[i][2].y + markerCorners[i][3].y) / 4;
+
+            area_ = sqrt((markerCorners[i][1].x - markerCorners[i][0].x) * (markerCorners[i][1].x - markerCorners[i][0].x) +
+                         (markerCorners[i][1].y - markerCorners[i][0].y) * (markerCorners[i][1].y - markerCorners[i][0].y)) *
+                    sqrt((markerCorners[i][2].x - markerCorners[i][1].x) * (markerCorners[i][2].x - markerCorners[i][1].x) +
+                         (markerCorners[i][2].y - markerCorners[i][1].y) * (markerCorners[i][2].y - markerCorners[i][1].y));
+
+            distance_ = sqrt(scale_factor_ / area_);
+
+            std::cout << (distance_ * distance_) * area_ << "\n"
+                      << "\n";
+
+            centre_.d = distance_;
+            centre_.a = area_;
+
+            std::cout << "Required Marker Detected"
+                      << "\n"
+                      << "\n";
+            cv::circle(outputImage, cv::Point(centre_.x, centre_.y), 4.0, cv::Scalar(0, 0, 255), 1, 8);
+            break;
+        }
+    }
 }
 
 void BoxDetectorNode::imageCallback(const sensor_msgs::ImageConstPtr& msg) {

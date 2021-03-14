@@ -7,7 +7,7 @@ void BoxDetector::setCannyParams(const int& lower, const int& upper, const int& 
     canny_param_upper_ = upper;
     canny_kernel_size_ = size;
 }
-arco void BoxDetector::highgriholdImage(cv::Mat& img) {
+void BoxDetector::thresholdImage(cv::Mat& img) {
     if (img.empty()) {
         return;
     }

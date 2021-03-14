@@ -20,6 +20,8 @@ class BoxDetectorNode {
 
   private:
     void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+    void calculateCentre();
+    void detectArucoMarker();
 
     cv::Mat img_;
 
@@ -30,8 +32,14 @@ class BoxDetectorNode {
     ros::Publisher contour_pub_;
 
     BoxDetector detect_;
+    double area_ = -1;
+    double distance_ = -1;
+    double scale_factor_ = -1;
+    std::vector<int> markerIds;
+    std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
+    cv::Mat outputImage;
 
-    detector_msgs::Centre centre_coord_;
+    detector_msgs::Centre centre_;
 };
 
 }  // namespace interiit21::box_detection
