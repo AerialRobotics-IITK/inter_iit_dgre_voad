@@ -37,6 +37,10 @@ void BoxDetectorNode::init(ros::NodeHandle& nh) {
 }
 
 void BoxDetectorNode::run() {
+    if (img_.empty()) {
+        return;
+    };
+    
     detectArucoMarker();
     calculateCentre();
     centre_pub_.publish(centre_);

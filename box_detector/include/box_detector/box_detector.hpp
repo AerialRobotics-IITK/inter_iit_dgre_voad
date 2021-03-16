@@ -22,6 +22,7 @@ class BoxDetectorNode {
     void imageCallback(const sensor_msgs::ImageConstPtr& msg);
     void calculateCentre();
     void detectArucoMarker();
+    void takeoff();
 
     cv::Mat img_;
 
