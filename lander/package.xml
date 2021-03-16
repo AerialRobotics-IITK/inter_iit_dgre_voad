@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  <description>The lander package</description>
+
+  <maintainer email="piyushk@iitk.ac.in">Piyush Kumar</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>roscpp</build_depend>
+
+  <depend>cv_bridge</depend>
+  <depend>detector_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>mavros_msgs</depend>
+  <depend>std_srvs</depend>
+
+</package>
