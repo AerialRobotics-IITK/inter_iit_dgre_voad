@@ -11,7 +11,6 @@ add_definitions(-std=c++17)
 set(CMAKE_BUILD_TYPE Release)
 
 cs_add_library(${PROJECT_NAME}_lib
-    src/libbox_detection.cpp
     src/box_detector.cpp
 )
 target_link_libraries(${PROJECT_NAME}_lib ${OpenCV_LIBS})

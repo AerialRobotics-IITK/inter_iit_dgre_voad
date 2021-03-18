@@ -3,47 +3,55 @@
 namespace interiit21::box_detection {
 
 void BoxDetectorNode::init(ros::NodeHandle& nh) {
-    int h_min, s_min, v_min;
-    int h_max, s_max, v_max;
-    int canny_lower, canny_upper, canny_ker;
-    int min_contour_area;
-
     img_sub_ = nh.subscribe("image_raw", 1, &BoxDetectorNode::imageCallback, this);
+    odom_sub_ = nh.subscribe("odom", 1, &BoxDetectorNode::odomCallback, this);
 
     ros::NodeHandle nh_private("~");
 
-    nh_private.getParam("h_min", h_min);
-    nh_private.getParam("s_min", s_min);
-    nh_private.getParam("v_min", v_min);
-    nh_private.getParam("h_max", h_max);
-    nh_private.getParam("s_max", s_max);
-    nh_private.getParam("v_max", v_max);
-    nh_private.getParam("canny_lower", canny_lower);
-    nh_private.getParam("canny_upper", canny_upper);
-    nh_private.getParam("canny_ker", canny_ker);
-    nh_private.getParam("min_contour_area", min_contour_area);
-
-    detect_.setHSVMin(h_min, s_min, v_min);
-    detect_.setHSVMax(h_max, s_max, v_max);
-    detect_.setCannyParams(canny_lower, canny_upper, canny_ker);
-    detect_.setMinArea(min_contour_area);
-
-    centre_pub_ = nh_private.advertise<detector_msgs::Centre>("centre_coord", 10);
-    thresh_pub_ = nh_private.advertise<sensor_msgs::Image>("thresh_img", 10);
+    centre_pub_ = nh_private.advertise<detector_msgs::Centre>("centre", 10);
+    global_coord_pub_ = nh_private.advertise<detector_msgs::GlobalCoord>("global_coord", 10);
     contour_pub_ = nh_private.advertise<sensor_msgs::Image>("contours", 10);
 
-    centre_.x = -1;
-    centre_.y = -1;
+    // set parameters
+    nh_private.getParam("camera_matrix", camera_matrix_);
+    nh_private.getParam("cam_to_quad_rot", camera_to_quad_matrix_);
+    nh_private.getParam("t_cam", camera_translation_);
+
+    arrayToMatrixConversion();
+    cameraMatrix = cv::Mat(3, 3, CV_32F, camera_matrix);
+    distCoeffs = cv::Mat::zeros(1, 5, CV_32F);
+
+    centre_(0) = -1;
+    centre_(1) = -1;
+    marker_centre_.x = -1;
+    marker_centre_.y = -1;
+    debug_ = true;
+    marker_detected_ = false;
 }
 
 void BoxDetectorNode::run() {
-    if (img_.empty()) {
-        return;
-    };
-    
     detectArucoMarker();
-    calculateCentre();
-    centre_pub_.publish(centre_);
+    findGlobalCoordinates();
+    centre_pub_.publish(marker_centre_);
+    global_coord_pub_.publish(global_coord_);
+}
+
+void BoxDetectorNode::arrayToMatrixConversion() {
+    for (int i = 0; i < 3; i++) {
+        camera_translation_vector_(i) = camera_translation_[i];
+        for (int j = 0; j < 3; j++) {
+            cameraToQuadMatrix(i, j) = camera_to_quad_matrix_[3 * i + j];
+            camera_matrix[3 * i + j] = camera_matrix_[3 * i + j];
+        }
+    }
+}
+
+void BoxDetectorNode::odomCallback(const nav_msgs::Odometry& msg) {
+    odom_ = msg;
+    tf::Quaternion q(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
+    Eigen::Quaterniond quat = Eigen::Quaterniond(q.w(), q.x(), q.y(), q.z());
+    quadOrientationMatrix = quat.normalized().toRotationMatrix().inverse();
+    translation_ = Eigen::Vector3d(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
 }
 
 void BoxDetectorNode::detectArucoMarker() {
@@ -57,57 +65,45 @@ void BoxDetectorNode::detectArucoMarker() {
 
     outputImage = img_.clone();
     cv::aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds);
-
-    // detect_.thresholdImage(img_);
-    // detect_.findGoodContours();
-    // detect_.drawContours(img_);
-    // detect_.fitRect(img_);
-
-    // std::pair<int, int> centre_pair = detect_.getCentre();
-    // double distance = detect_.getDistance();
-    // double area = detect_.getArea();
-    // centre_coord_.x = centre_pair.first;
-    // centre_coord_.y = centre_pair.second;
-    // centre_coord_.d = (float) distance;
-    // centre_coord_.a = (float) area;
-    // centre_coord_.header.stamp = ros::Time::now();
-
-    // sensor_msgs::ImagePtr thresh_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", detect_.getThresh()).toImageMsg();
-    // sensor_msgs::ImagePtr contour_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img_).toImageMsg();
-    sensor_msgs::ImagePtr contour_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", outputImage).toImageMsg();
-
-    // thresh_pub_.publish(thresh_msg);
+    marker_detected_ = false;
+    for (int i = 0; i < markerIds.size(); i++) {
+        if (markerIds[i] == 0) {
+            marker_detected_ = true;
+            index_ = i;
+            centre_(0) = (markerCorners[i][0].x + markerCorners[i][1].x + markerCorners[i][2].x + markerCorners[i][3].x) / 4;
+            centre_(1) = (markerCorners[i][0].y + markerCorners[i][1].y + markerCorners[i][2].y + markerCorners[i][3].y) / 4;
+            cv::circle(outputImage, cv::Point(centre_(0), centre_(1)), 4.0, cv::Scalar(0, 0, 255), 1, 8);
+        }
+    }
+    contour_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", outputImage).toImageMsg();
     contour_pub_.publish(contour_msg);
-    // centre_pub_.publish(centre_coord_);
 }
 
-void BoxDetectorNode::calculateCentre() {
-    for (int i = 0; i < markerIds.size(); i++) {
-        if (markerIds[i] != 0)
-            continue;
-        if (markerIds[i] == 0) {
-            centre_.x = (markerCorners[i][0].x + markerCorners[i][1].x + markerCorners[i][2].x + markerCorners[i][3].x) / 4;
-            centre_.y = (markerCorners[i][0].y + markerCorners[i][1].y + markerCorners[i][2].y + markerCorners[i][3].y) / 4;
+void BoxDetectorNode::findGlobalCoordinates() {
+    if (marker_detected_ == false)
+        return;
 
-            area_ = sqrt((markerCorners[i][1].x - markerCorners[i][0].x) * (markerCorners[i][1].x - markerCorners[i][0].x) +
-                         (markerCorners[i][1].y - markerCorners[i][0].y) * (markerCorners[i][1].y - markerCorners[i][0].y)) *
-                    sqrt((markerCorners[i][2].x - markerCorners[i][1].x) * (markerCorners[i][2].x - markerCorners[i][1].x) +
-                         (markerCorners[i][2].y - markerCorners[i][1].y) * (markerCorners[i][2].y - markerCorners[i][1].y));
+    cv::aruco::estimatePoseSingleMarkers(markerCorners, 0.4, cameraMatrix, distCoeffs, rvecs, tvecs);
+    cv::Vec3d tvec = tvecs[index_];
+    Eigen::Vector3d camera_frame_coordinates(tvec[0], tvec[1], tvec[2]);
+    Eigen::Vector3d coordinates_quad_frame = cameraToQuadMatrix * camera_frame_coordinates + camera_translation_vector_;
+    global_coordinates_ = quadOrientationMatrix * coordinates_quad_frame + translation_;
 
-            distance_ = sqrt(scale_factor_ / area_);
-
-            // std::cout << (9) * area_ << "\n"
-            //           << "\n";
-
-            centre_.d = distance_;
-            centre_.a = area_;
-
-            std::cout << "Required Marker Detected"
-                      << "\n"
-                      << "\n";
-            cv::circle(outputImage, cv::Point(centre_.x, centre_.y), 4.0, cv::Scalar(0, 0, 255), 1, 8);
-            break;
-        }
+    if (debug_) {
+        ROS_INFO_ONCE("Required Marker Detected");
+        // std::cout << translation_(0)<<" "<<translation_(1) <<" "<<translation_(2)<<std::endl;
+        // std::cout << global_coordinates_(0) << " " << global_coordinates_(1) << " " << global_coordinates_(2) << std::endl;
+        // std::cout << "Required Marker Detected"
+        //           << "\n";
+        // std::cout << "centre_coordinates" << centre_(0) << " " << centre_(1) << std::endl;
+        // std::cout << "pose estimation";
+        // std::cout << "rotation:" << rvecs[0][0] << " " << rvecs[0][1] << " " << rvecs[0][2] << "\n"
+        //           << "translation" << tvecs[0][0] << " " << tvecs[0][1] << " " << tvecs[0][2] << std::endl;
+        marker_centre_.x = centre_(0);
+        marker_centre_.y = centre_(1);
+        global_coord_.x = global_coordinates_(0);
+        global_coord_.y = global_coordinates_(1);
+        global_coord_.z = global_coordinates_(2);
     }
 }
 
