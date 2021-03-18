@@ -33,6 +33,7 @@ class ExplorerNode {
     mavros_msgs::CommandBool arm_cmd_;
     mavros_msgs::SetMode offb_set_mode_;
     mavros_msgs::CommandTOL land_cmd_;
+    mavros_msgs::CommandTOL takeoff_cmd_;
 
     //*Subscribers
     ros::Subscriber pose_sub_;
@@ -47,6 +48,7 @@ class ExplorerNode {
     ros::ServiceClient landing_client_;
     ros::ServiceClient arming_client_;
     ros::ServiceClient set_mode_client_;
+    ros::ServiceClient takeoff_client_;
 };
 
 }  // namespace interiit21::explorer

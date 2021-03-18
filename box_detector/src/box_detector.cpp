@@ -96,8 +96,8 @@ void BoxDetectorNode::calculateCentre() {
 
             distance_ = sqrt(scale_factor_ / area_);
 
-            std::cout << (distance_ * distance_) * area_ << "\n"
-                      << "\n";
+            // std::cout << (9) * area_ << "\n"
+            //           << "\n";
 
             centre_.d = distance_;
             centre_.a = area_;

@@ -35,7 +35,7 @@ class BoxDetectorNode {
     BoxDetector detect_;
     double area_ = -1;
     double distance_ = -1;
-    double scale_factor_ = -1;
+    double scale_factor_ = 17424;
     std::vector<int> markerIds;
     std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
     cv::Mat outputImage;

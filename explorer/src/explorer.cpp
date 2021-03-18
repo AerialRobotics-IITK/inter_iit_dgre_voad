@@ -19,6 +19,7 @@ void ExplorerNode::init(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
     while (ros::ok() && state_sub_.getNumPublishers() == 0) {
         ros::Duration(0.2).sleep();
     }
+	takeoff_cmd_.request.altitude = 2.5;
 }
 
 void ExplorerNode::run() {
@@ -79,6 +80,7 @@ void ExplorerNode::takeoff() {
 				last_request = ros::Time::now();
 			}
 		}
+		takeoff_client_.call(takeoff_cmd_);
 		setpoint_pub_.publish(setpoint_);
 		ros::spinOnce();
 		rate.sleep();
