@@ -4,7 +4,7 @@
     <env name="GAZEBO_RESOURCE_PATH"    value="${GAZEBO_RESOURCE_PATH}:$(find interiit21)/models:~/drdo_ws/src/ardupilot_gazebo/models"/>
 	<arg name="gui" default="true"/>
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
-	<arg name="world_name" value="$(find interiit21)/worlds/interiit_world2.world"/>
+	<arg name="world_name" value="$(find interiit21)/worlds/interiit_world3.world"/>
 	<arg name="gui" value="$(arg gui)"/>
 	<!-- more default parameters can be changed here -->
 	</include>
@@ -32,7 +32,6 @@
 	</include>
 
 	<node pkg="tf" type="static_transform_publisher" name="" args="0 0 0 -1.57 0 -1.57 base_link camera_link_optical 100" />
-	<node pkg="broadcaster" type="iris_tf2_broadcaster" name = "iris_tf2_broadcaster" output="screen"/>
-
+	<node pkg="broadcaster" type="iris_tf2_broadcaster" name = "iris_tf2_broadcaster" output="screen"/> 	
 
 </launch>

@@ -32,7 +32,11 @@ int main(int argc, char** argv){
     ros::NodeHandle node;
     ros::Subscriber sub = node.subscribe("/mavros/local_position/pose", 10, &poseCallback);
 
-    ros::spin();
+    ros::Rate loop_rate(100);
+    while (ros::ok()) {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
     return 0;
 
 }
