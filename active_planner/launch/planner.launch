@@ -1,0 +1,67 @@
+<launch>
+  <!-- Gazebo arguments -->
+  <arg name="mav_name" default="iris"/>
+
+  <!-- Voxblox arguments -->
+  <arg name="voxel_size" default="0.10"/>
+  <arg name="voxels_per_side" default="16"/>
+  <arg name="ray_length" default="5.0"/>
+  <arg name="method" default="merged"/>
+  <arg name="verbose_voxblox" default="true"/>
+  <arg name="world_frame" default="map" />
+    
+  <!--  Planner arguments-->
+  <arg name="planner_config" default="planners/example_config.yaml"/>
+  
+  <!--  Experiment arguments -->  
+  <arg name="experiment_config" default="CityBuilding.yaml"/>
+  
+
+  <!-- *** Run the Simulation *** -->
+  <!-- Load experiment config -->
+  <rosparam command="load" file="$(find active_planner)/cfg/experiments/$(arg experiment_config)"/>
+  
+  <group ns="planner">
+    <!-- Voxblox -->
+    <!-- <node name="voxblox_node" pkg="voxblox_ros" type="esdf_server" output="screen" args="-alsologtostderr">
+      <remap from="pointcloud" to="/depth_camera/depth/points"/>
+      <param name="use_tf_transforms" value="true"/>
+      <param name="publish_tsdf_map" value="true" />
+      <param name="publish_esdf_map" value="true" />
+      <param name="tsdf_voxel_size" value="$(arg voxel_size)" />
+      <param name="tsdf_voxels_per_side" value="$(arg voxels_per_side)" />
+      <param name="color_mode" value="color" />
+      <param name="update_mesh_every_n_sec" value="1.0" />
+      <param name="method" value="$(arg method)" />
+      <param name="max_ray_length" value="$(arg ray_length)" />
+      <param name="allow_clear" value="true" />
+      <param name="verbose" value="$(arg verbose_voxblox)" />
+      <param name="publish_map_incremental" value="true" />
+      <param name="use_tf_transforms" value="true" />
+      <param name="clear_sphere_for_planning" value="true" />
+      <param name="world_frame" value="$(arg world_frame)" />
+    </node> -->
+    
+    <!-- Planner -->
+    <node name="planner_node" pkg="active_planner" type="planner_node" output="screen">
+		  <!-- Voxblox Server -->
+      <remap from="planner_node/esdf_map_in" to="esdf_map" />
+      <remap from="planner_node/tsdf_map_in" to="tsdf_map" />
+      <param name="use_tf_transforms" value="false" />
+      <param name="tsdf_voxel_size" value="$(arg voxel_size)" />
+      <param name="tsdf_voxels_per_side" value="$(arg voxels_per_side)" />
+      <param name="update_mesh_every_n_sec" value="0.0" />   
+      <param name="publish_traversable" value="false" />         
+    
+    	<!-- General Settings -->
+      <remap from="odometry" to="/mavros/local_position/odom" />
+      <remap from="command/trajectory" to="/mavros/setpoint_trajectory/local" />
+
+      <!-- Build the Planner by Configuration     -->
+      <rosparam command="load" file="$(find active_planner)/cfg/$(arg planner_config)"/>
+    </node>    
+  </group>
+
+  <!-- RVIZ Visualization -->
+  <!-- <node type="rviz" name="rviz_voxblox" pkg="rviz" args="-d $(find active_planner)/cfg/experiments/experiment_visualization.rviz"/> -->
+</launch>
