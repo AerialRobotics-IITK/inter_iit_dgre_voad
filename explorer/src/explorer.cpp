@@ -26,14 +26,12 @@ void ExplorerNode::init(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
 
 void ExplorerNode::run() {
     if ((centre_.x != -1) && (centre_.y != -1) && (land_cmd_.response.success == false)) {
-        ROS_INFO_ONCE("Landing Called");
         land();
     }
 }
 
 void ExplorerNode::takeoff() {
     ros::Rate rate(20);
-    ROS_INFO("Taking off!");
 
     ROS_WARN("Waiting for connection..");
     while (ros::ok() && current_state_.connected == false) {
@@ -72,7 +70,7 @@ void ExplorerNode::takeoff() {
         if (current_state_.mode != "GUIDED" && (ros::Time::now() - last_request > ros::Duration(5.0))) {
             if (set_mode_client_.call(offb_set_mode_)) {
                 if (offb_set_mode_.response.mode_sent)
-                    ROS_WARN("Offboard enabled");
+                    ROS_WARN("Guided enabled");
             }
             last_request = ros::Time::now();
         } else {
@@ -85,6 +83,9 @@ void ExplorerNode::takeoff() {
             }
         }
         takeoff_client_.call(takeoff_cmd_);
+        if (land_cmd_.response.success) {
+            ROS_INFO("Taking off!");
+        }
         // setpoint_pub_.publish(setpoint_);
         ros::spinOnce();
         rate.sleep();
@@ -94,32 +95,27 @@ void ExplorerNode::takeoff() {
 void ExplorerNode::land() {
     ros::Rate rate(20);
     setpoint_.pose.position.z = odom_.pose.pose.position.z;
-	setpoint_.pose.orientation = odom_.pose.pose.orientation;
-    for (int i = 0; i < 100; i++) {
+    setpoint_.pose.orientation = odom_.pose.pose.orientation;
+
+    while (land_cmd_.response.success == false) {
         setpoint_.pose.position.x = pose_.x;
         setpoint_.pose.position.y = pose_.y;
-        setpoint_.pose.position.z -= 0.2;
+        setpoint_.pose.position.z = odom_.pose.pose.position.z - 2;
         setpoint_pub_.publish(setpoint_);
+
         rate.sleep();
         ros::spinOnce();
-        if (setpoint_.pose.position.z <= 1) {
-            // landing_client_.call(land_cmd_);
-            // break;
+
+        if (odom_.pose.pose.position.z <= 1) {
+            landing_client_.call(land_cmd_);
+            ROS_INFO_ONCE("Landing Called");
+        } else if (odom_.pose.pose.position.z <= 2.5) {
+            if (fabs(pose_.x - odom_.pose.pose.position.x) <= 0.25 && fabs(pose_.y - odom_.pose.pose.position.y) <= 0.25) {
+                landing_client_.call(land_cmd_);
+                ROS_INFO_ONCE("Landing Called");
+            }
         }
     }
-
-    // //* Move the quad to the (x,y) of the detected white box
-    // ros::Rate rate(20);
-    // setpoint_.pose.position.x = pose_.x;
-    // setpoint_.pose.position.y = pose_.y;
-    // setpoint_.pose.position.z = odom_.pose.pose.position.z;
-    // setpoint_pub_.publish(setpoint_);
-    // std::cout << setpoint_ << "\n"
-    //           << "\n";
-    // for (int i; i < 100; i++) {
-    //     rate.sleep();
-    // }
-    // landing_client_.call(land_cmd_);
 }
 
 void ExplorerNode::centreCallback(const detector_msgs::Centre& msg) {
