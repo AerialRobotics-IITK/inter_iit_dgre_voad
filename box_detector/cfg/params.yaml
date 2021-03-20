@@ -1,6 +1,6 @@
 t_cam: [0, 0, 0.02]
 cam_to_quad_rot: [0,-1,0,-1,0,0,0,0,-1]
-camera_matrix: [415.21159208661874, 0.0, 424.5, 0.0, 415.21159208661874, 240.5, 0.0, 0.0, 1.0]
-verbose: false              # Make it true for debugging purposes.
+camera_matrix: [205.46963709898583, 0.0, 320.5, 0.0, 205.46963709898583, 240.5, 0.0, 0.0, 1.0]
+verbose: true              # Make it true for debugging purposes.
 image_height: 480
 image_width: 848

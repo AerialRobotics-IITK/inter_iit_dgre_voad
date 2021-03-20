@@ -3,8 +3,12 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 
+#include<cmath>
+
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/String.h>
+#include <mavros_msgs/CommandTOL.h>
 #include <image_transport/image_transport.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
@@ -34,10 +38,13 @@ class BoxDetectorNode {
     ros::Subscriber odom_sub_;
     ros::Publisher contour_pub_;
     ros::Publisher pose_pub_;
+    ros::Publisher msg_pub_;
+    ros::ServiceClient landing_client_;
 
     nav_msgs::Odometry odom_;
     sensor_msgs::ImagePtr contour_msg;
     geometry_msgs::PoseStamped pose_;
+    mavros_msgs::CommandTOL land_cmd_;
 
     Eigen::Matrix3d cameraToQuadMatrix;
     Eigen::Matrix3d quadOrientationMatrix;
@@ -55,6 +62,7 @@ class BoxDetectorNode {
     bool debug_;
     bool marker_detected_;
     float camera_matrix[9];
+    std::string msg_;
     std::vector<float> camera_to_quad_matrix_, camera_translation_, camera_matrix_;
     std::vector<int> markerIds;
     std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
