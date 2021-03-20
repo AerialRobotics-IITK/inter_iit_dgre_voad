@@ -59,12 +59,12 @@ void BoxDetectorNode::landing() {
   pose_.pose.position.y = global_coordinates_(1);
   pose_.pose.orientation = odom_.pose.pose.orientation;
   if (odom_.pose.pose.position.z > 2) {
-    pose_.pose.position.z = odom_.pose.pose.position.z - 0.2;
+    pose_.pose.position.z = odom_.pose.pose.position.z - 0.4;
     pose_pub_.publish(pose_);
     std::cout << odom_.pose.pose.position.z;
   } else if (odom_.pose.pose.position.z <= 2) {
-    if (fabs(global_coordinates_(0) - odom_.pose.pose.position.x) <= 0.15 &&
-        fabs(global_coordinates_(1) - odom_.pose.pose.position.y) <= 0.15) {
+    if (fabs(global_coordinates_(0) - odom_.pose.pose.position.x) <= 0.25 &&
+        fabs(global_coordinates_(1) - odom_.pose.pose.position.y) <= 0.25) {
       // call lander
       msg_ = "Marker ID : 0, Landed";
       landing_client_.call(land_cmd_);
