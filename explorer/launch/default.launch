@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="quad_name" default="quadrotor" />
+
+    <include file="$(find interiit21)/launch/interiit_world1.launch"></include>
+
+    <node pkg="explorer" type="sim_vehicle.sh" name="sim_vehicle_node" />
+
+    <group ns="$(arg quad_name)">
+        <node pkg="box_detector" type="box_detector_node" name="box_detector_node" output="screen">
+            <rosparam file="$(find box_detector)/cfg/params.yaml" />
+            <remap from="global_coord"    to="box_detector/global_coord" />
+            <remap from="centre"    to="box_detector/centre_coord" />
+            <remap from="odom"    to="/mavros/local_position/odom" />
+            <remap from="image_raw" to="/camera/color/image_raw" />
+        </node>
+        <!-- <node pkg="explorer" type="explorer_node" name="explorer_node" output="screen">
+            <rosparam file="$(find explorer)/cfg/params.yaml" />
+            <remap from="pose"    to="/quadrotor/box_detector_node/global_coord" />
+            <remap from="odom"    to="/mavros/local_position/odom" />
+            <remap from="centre_coord"    to="/quadrotor/box_detector_node/centre" />
+            <remap from="setpoint"    to="/mavros/setpoint_position/local" />
+        </node> -->
+    </group>
+
+
+</launch>
