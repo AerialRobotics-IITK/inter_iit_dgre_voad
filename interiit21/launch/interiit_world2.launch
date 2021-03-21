@@ -4,9 +4,8 @@
     <env name="GAZEBO_RESOURCE_PATH"    value="${GAZEBO_RESOURCE_PATH}:$(find interiit21)/models:~/drdo_ws/src/ardupilot_gazebo/models"/>
 	<arg name="gui" default="true"/>
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
-	<arg name="world_name" value="$(find interiit21)/worlds/interiit_world1.world"/>
+	<arg name="world_name" value="$(find interiit21)/worlds/interiit_world2.world"/>
 	<arg name="gui" value="$(arg gui)"/>
-	<arg name="verbose" default="true"/>
 	<!-- more default parameters can be changed here -->
 	</include>
 	<!-- vim: set ft=xml noet : -->
@@ -32,8 +31,8 @@
 		<arg name="log_output" value="$(arg log_output)" />
 	</include>
 
-	<!--added a standalone tf node to correct the point cloud orientation in rviz and generate proper tree-->
 	<node pkg="tf" type="static_transform_publisher" name="" args="0 0 0 -1.57 0 -1.57 base_link camera_link_optical 100" />
 	<node pkg="broadcaster" type="iris_tf2_broadcaster" name = "iris_tf2_broadcaster" output="screen"/>
+
 
 </launch>
