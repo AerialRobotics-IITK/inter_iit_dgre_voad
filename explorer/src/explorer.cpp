@@ -9,6 +9,7 @@ void ExplorerNode::init(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
     state_sub_ = nh.subscribe("mavros/state", 10, &ExplorerNode::stateCallback, this);
 
     setpoint_pub_ = nh.advertise<geometry_msgs::PoseStamped>("setpoint", 10);
+    marker_status_pub_ = nh.advertise<std_msgs::String>("/Aruco/message", 10);
 
     landing_client_ = nh.serviceClient<mavros_msgs::CommandTOL>("mavros/cmd/land");
     arming_client_ = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
@@ -25,6 +26,13 @@ void ExplorerNode::init(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
 }
 
 void ExplorerNode::run() {
+    //* Publish Marker Status
+    if ((centre_.x == -1) && (centre_.y == -1)) {
+        marker_status_.data = "Marker ID: none, looking for marker";
+        marker_status_pub_.publish(marker_status_);
+    }
+
+    //* Command for Landing
     if ((centre_.x != -1) && (centre_.y != -1) && (land_cmd_.response.success == false)) {
         land();
     }
@@ -98,9 +106,10 @@ void ExplorerNode::land() {
     setpoint_.pose.orientation = odom_.pose.pose.orientation;
 
     while (land_cmd_.response.success == false) {
+        //*Landing Algorithm
         setpoint_.pose.position.x = pose_.x;
         setpoint_.pose.position.y = pose_.y;
-        setpoint_.pose.position.z = odom_.pose.pose.position.z - 2;
+        setpoint_.pose.position.z = odom_.pose.pose.position.z - 2; //*Vary this constant to change landing speed
         setpoint_pub_.publish(setpoint_);
 
         rate.sleep();
@@ -109,10 +118,16 @@ void ExplorerNode::land() {
         if (odom_.pose.pose.position.z <= 1) {
             landing_client_.call(land_cmd_);
             ROS_INFO_ONCE("Landing Called");
+            marker_status_.data = "Marker ID : 0, Landed";
+            marker_status_pub_.publish(marker_status_);
+            land_cmd_.response.success = true;
         } else if (odom_.pose.pose.position.z <= 2.5) {
             if (fabs(pose_.x - odom_.pose.pose.position.x) <= 0.25 && fabs(pose_.y - odom_.pose.pose.position.y) <= 0.25) {
                 landing_client_.call(land_cmd_);
                 ROS_INFO_ONCE("Landing Called");
+                marker_status_.data = "Marker ID : 0, Landed";
+                marker_status_pub_.publish(marker_status_);
+                land_cmd_.response.success = true;
             }
         }
     }

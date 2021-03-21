@@ -19,5 +19,6 @@
   <depend>nav_msgs</depend>
   <depend>mavros_msgs</depend>
   <depend>std_srvs</depend>
+  <depend>std_msgs</depend>
 
 </package>
