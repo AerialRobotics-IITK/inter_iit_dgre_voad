@@ -3,7 +3,6 @@
     <arg name="voxel_size" default="0.20" />
     <arg name="voxels_per_side" default="16" />
     <arg name="world_frame" default="map" />
-    <group ns="planner">
 
       <node name="voxblox_node" pkg="voxblox_ros" type="esdf_server" output="screen" args="-alsologtostderr" clear_params="true">
         <remap from="pointcloud" to="/depth_camera/depth/points"/>
@@ -28,5 +27,4 @@
         <param name="world_frame" value="$(arg world_frame)" />
       </node> -->
 
-    </group>
   </launch>

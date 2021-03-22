@@ -27,5 +27,10 @@
     <depend>sensor_msgs</depend>
     <depend>geometry_msgs</depend>
     <depend>nav_msgs</depend>
-    
+    <depend>message_generation</depend>
+    <depend>message_runtime</depend>
+    <depend>mav_trajectory_generation_ros</depend>
+    <depend>tf</depend>
+    <depend>visualization_msgs</depend>
+
 </package>
