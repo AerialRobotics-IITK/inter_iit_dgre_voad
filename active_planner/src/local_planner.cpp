@@ -7,7 +7,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     , evaluator_(nh, nh_private)
     , active_(false)
     , exit_(false)
-    , const_yaw_(0) {
+    , const_yaw_(3.14) {
     nh_private.getParam("visualize", visualize_);
     nh_private.getParam("robot_radius", robot_radius_);
     nh_private.getParam("voxel_size", voxel_size_);
@@ -39,13 +39,15 @@ geometry_msgs::Point LocalPlanner::convertEigenToGeometryMsg(const Eigen::Vector
 
 Eigen::Vector3d LocalPlanner::getBestFrontier() {
     geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
-    double min_distance = DBL_MAX;
+    double max_distance = DBL_MIN;
     Eigen::Vector3d best_f;
     for (auto frontier : frontiers_) {
         double distance = norm(curr_pos, convertEigenToGeometryMsg(frontier.center));
-        if (min_distance > distance) {
-            min_distance = distance;
-            best_f = frontier.center;
+        if (distance > max_distance) {
+            if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
+                max_distance = distance;
+                best_f = frontier.center;
+            }
         }
     }
     return best_f;
@@ -56,24 +58,39 @@ void LocalPlanner::run() {
         frontiers_.clear();
         evaluator_.findFrontiers();
         frontiers_ = evaluator_.getFrontiers();
+
+        ROS_INFO_STREAM("Found " << frontiers_.size() << " frontiers");
         Eigen::Vector3d waypoint = getBestFrontier();
+
+        ROS_INFO_STREAM("Pursuing new frontier" << waypoint);
+
         waypoint_queue_.push(waypoint);
     } else {
-        Eigen::Vector3d waypt = waypoint_queue_.front();
+        Eigen::Vector3d waypt = waypoint_queue_.top();
         waypoint_queue_.pop();
 
+        ros::spinOnce();
         mav_msgs::EigenOdometry start_odom;
         mav_msgs::eigenOdometryFromMsg(odometry_, &start_odom);
+
+        frontier_path_.clear();
+        trajectory_.clear();
 
         pathfinder_.findPath(start_odom.position_W, waypt);
         frontier_path_ = pathfinder_.getPath();
         trajectory_ = generateTrajectoryThroughWaypoints(frontier_path_);
+
+        ROS_INFO_STREAM("Generated trajectory of " << trajectory_.size());
+        if (!trajectory_.empty()) {
+            visited_frontiers_[getHash(waypt)] = waypt;
+        }
 
         ros::Rate pub_rate(20);
         for (auto target : trajectory_) {
             geometry_msgs::PoseStamped setpt;
             mav_msgs::msgPoseStampedFromEigenTrajectoryPoint(target, &setpt);
             command_pub_.publish(setpt);
+            ROS_INFO("Published next waypoint!");
             ros::spinOnce();
             bool feasible = true;
 
@@ -84,17 +101,26 @@ void LocalPlanner::run() {
 
                 if (pathfinder_.isLineInCollision(start_odom.position_W, target.position_W)) {
                     ROS_WARN("Aborting current trajectory...");
+                    feasible = false;
                     break;
                 }
+                // ROS_INFO("Heading to next waypoint!");
+
                 pub_rate.sleep();
             }
 
             if (!feasible) {
                 trajectory_.clear();
                 frontier_path_.clear();
+                ROS_INFO("Aborting and looking for next frontier");
+                visited_frontiers_[getHash(waypt)] = waypt;
                 break;
             }
+
+            // ROS_INFO("Processing next waypoint");
         }
+
+        ROS_INFO("Looking for next frontier");
     }
 }
 
@@ -106,9 +132,9 @@ Trajectory LocalPlanner::generateTrajectoryThroughWaypoints(const Path& waypoint
         return traj;
     }
 
-    for (auto& point : waypoints) {
+    for (auto i = 0; i < waypoints.size(); i++) {
         mav_msgs::EigenTrajectoryPoint traj_pt;
-        traj_pt.position_W = point;
+        traj_pt.position_W = waypoints[i];
         traj.push_back(traj_pt);
     }
 

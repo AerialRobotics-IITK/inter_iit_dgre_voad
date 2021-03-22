@@ -4,11 +4,12 @@
 #include <mav_msgs/conversions.h>
 #include <mav_msgs/eigen_mav_msgs.h>
 #include <nav_msgs/Odometry.h>
-#include <queue>
+#include <stack>
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
 #include <std_srvs/SetBool.h>
 #include <tf/tf.h>
+#include <unordered_map>
 
 #include <active_planner/frontier_evaluator.hpp>
 #include <active_planner/path_finder.hpp>
@@ -35,6 +36,10 @@ class LocalPlanner {
   private:
     enum class YawPolicy { POINT_FACING, ANTICIPATE_VELOCITY, FOLLOW_VELOCITY, CONSTANT };
 
+    inline std::string getHash(const Eigen::Vector3d& coord) {
+        return std::to_string(int(coord.x() / voxel_size_)) + "," + std::to_string(int(coord.y() / voxel_size_));
+    }
+
     static inline double norm(const geometry_msgs::Point& p1, const geometry_msgs::Point& p2) {
         return std::sqrt(std::pow(p1.x - p2.x, 2) + std::pow(p1.y - p2.y, 2) + std::pow(p1.z - p2.z, 2));
     }
@@ -57,7 +62,7 @@ class LocalPlanner {
     }
 
     Trajectory generateTrajectoryThroughWaypoints(const Path& waypoints);
-    void applyYawToTrajectory(Trajectory& trajectory, const YawPolicy& policy = YawPolicy::ANTICIPATE_VELOCITY);
+    void applyYawToTrajectory(Trajectory& trajectory, const YawPolicy& policy = YawPolicy::CONSTANT);
 
     Eigen::Vector3d getBestFrontier();
 
@@ -80,10 +85,11 @@ class LocalPlanner {
     nav_msgs::Odometry odometry_;
 
     Path frontier_path_;
-    std::queue<Eigen::Vector3d> waypoint_queue_;
+    std::stack<Eigen::Vector3d> waypoint_queue_;
     std::vector<FrontierEvaluator::FrontierCenter> frontiers_;
-    Trajectory trajectory_;
+    std::unordered_map<std::string, Eigen::Vector3d> visited_frontiers_;
 
+    Trajectory trajectory_;
     PathFinder pathfinder_;
     Visualizer visualizer_;
     FrontierEvaluator evaluator_;

@@ -68,7 +68,7 @@ class PathFinder {
     void searchPath(const uint& start_index, const uint& end_index);
     void shortenPath();
 
-    void findMaximalIndices(const uint& start, const uint& end, std::vector<bool>* map);
+    void findMaximalIndices(const uint& start, const uint& end);
 
     rviz_visualizer::Graph convertGraph(const Graph& graph);
 
@@ -99,6 +99,8 @@ class PathFinder {
 
     PointSampler sampler_;
     Visualizer visualizer_;
+
+    std::vector<bool> retain_;
 };
 
 }  // namespace local_planner

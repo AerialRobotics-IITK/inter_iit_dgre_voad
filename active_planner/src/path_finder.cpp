@@ -28,7 +28,7 @@ void PointSampler::expandRegion(const double& size) {
 PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     : server_(nh, nh_private)
     , sampler_()
-    , p_sample_(50)
+    , p_sample_(10)
     , expand_region_(false)
     , expand_size_(5)
     , inc_density_(false)
@@ -62,6 +62,12 @@ PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
 }
 
 void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt) {
+    if ((start_pt - end_pt).norm() < voxel_size_) {
+        path_.push_back(start_pt);
+        path_.push_back(end_pt);
+        return;
+    }
+
     createGraph(start_pt, end_pt);
     if (visualize_) {
         ROS_INFO("Visualizing graph!");
@@ -80,6 +86,24 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
             visualizer_.visualizeGraph("graph", convertGraph(graph_));
         }
         searchPath(0, 1);
+
+        int end_node_id = 1;
+
+        if (raw_path_.empty()) {
+            ROS_WARN("Planning to nearest point!");
+            double end_distance = (start_pt - end_pt).norm();
+            for (auto& node : graph_) {
+                double distance = (end_pt - node->getPosition()).norm();
+                // ROS_INFO_STREAM(distance << " " << end_distance);
+                if (end_distance > distance || end_distance == 0) {
+                    end_distance = distance;
+                    end_node_id = node->getID();
+                }
+            }
+            ROS_INFO_STREAM(end_node_id);
+        }
+
+        searchPath(0, end_node_id);
     }
 
     if (visualize_) {
@@ -89,12 +113,12 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
 
     shortenPath();
     if (!short_path_.empty()) {
-        if (visualize_) {
-            visualizer_.visualizePath("short_path", short_path_, "map", Visualizer::ColorType::GREEN, 0.1);
-        }
+        // if (visualize_) {
+        // visualizer_.visualizePath("short_path", short_path_, "map", Visualizer::ColorType::GREEN, 0.1);
+        // }
         path_ = short_path_;
     } else {
-        path_ = raw_path_;
+    path_ = raw_path_;
     }
     ROS_INFO_STREAM("PATH" << path_.size());
 }
@@ -183,7 +207,7 @@ void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
                 curr_index = parent[curr_index];
             }
 
-            curr_path.push_back(graph_[start_index]->getPosition());
+            // curr_path.push_back(graph_[start_index]->getPosition());
             std::reverse(curr_path.begin(), curr_path.end());
             raw_path_ = curr_path;
             ROS_INFO_STREAM("RAWIN: " << raw_path_.size());
@@ -209,30 +233,31 @@ void PathFinder::shortenPath() {
         return;
     }
     short_path_.clear();
-    std::vector<bool> retain(raw_path_.size(), false);
+    retain_.resize(raw_path_.size(), false);
 
-    findMaximalIndices(0, raw_path_.size() - 1, &retain);
+    findMaximalIndices(0, raw_path_.size() - 1);
     for (uint i = 0; i < raw_path_.size(); i++) {
-        if (retain[i])
+        if (retain_[i])
             short_path_.push_back(raw_path_[i]);
     }
+    ROS_INFO_STREAM("SHORT: " << short_path_.size());
 }
 
-void PathFinder::findMaximalIndices(const uint& start, const uint& end, std::vector<bool>* map) {
-    if (start >= end) {
+void PathFinder::findMaximalIndices(const uint& start, const uint& end) {
+    if (start >= end || start >= retain_.size() || end >= retain_.size()) {
         return;
     }
 
     if (!isLineInCollision(raw_path_[start], raw_path_[end])) {
-        (*map)[start] = (*map)[end] = true;
+        retain_[start] = retain_[end] = true;
         return;
     } else {
         if (start == end) {
             return;
         }
         uint centre = (start + end) / 2;
-        findMaximalIndices(start, centre, map);
-        findMaximalIndices(centre, end, map);
+        findMaximalIndices(start, centre);
+        findMaximalIndices(centre, end);
     }
 }
 
