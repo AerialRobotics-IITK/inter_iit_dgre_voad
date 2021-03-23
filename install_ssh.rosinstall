@@ -1,7 +1,4 @@
 - git:
-    local-name: catkin_boost_python_buildtool
-    uri: git@github.com:ethz-asl/catkin_boost_python_buildtool.git
-- git:
     local-name: catkin_simple
     uri: git@github.com:catkin/catkin_simple.git
 - git:
@@ -17,20 +14,11 @@
     local-name: glog_catkin
     uri: git@github.com:ethz-asl/glog_catkin.git
 - git:
-    local-name: mav_trajectory_generation
-    uri: git@github.com:ethz-asl/mav_trajectory_generation.git
-- git:
     local-name: minkindr
     uri: git@github.com:ethz-asl/minkindr.git
 - git:
     local-name: minkindr_ros
     uri: git@github.com:ethz-asl/minkindr_ros.git
-- git:
-    local-name: nlopt
-    uri: git@github.com:ethz-asl/nlopt.git
-- git:
-    local-name: numpy_eigen
-    uri: git@github.com:ethz-asl/numpy_eigen.git
 - git:
     local-name: protobuf_catkin
     uri: git@github.com:ethz-asl/protobuf_catkin.git
@@ -38,5 +26,5 @@
     local-name: voxblox
     uri: git@github.com:ethz-asl/voxblox.git
 - git:
-    local-name: mav_active_3d_planning
-    uri: git@github.com:ethz-asl/mav_active_3d_planning.git
+    local-name: mav_comm
+    uri: git@github.com:ethz-asl/mav_comm.git
