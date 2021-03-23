@@ -1,0 +1,107 @@
+Name:		Base48/model_136.pth
+Trained on:	DatasetAug
+Tested on:	DatasetDiff
+Acc:		93.16618254089589
+f1:		    0.9049518299628024
+
+Name:		Base48/model_136.pth
+Trained on:	DatasetAug
+Tested on:	DatasetAug
+Acc:		97.39336492890995
+f1:		    0.9539442338348384
+
+Name:		Diff48/model_136.pth
+Trained on:	DatasetDiff
+Tested on:	DatasetDiff
+Acc:		95.32181623604953
+f1:		    0.931468304449789
+
+Name:		Aug48/model_83.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetDiff
+Acc:		97.11817764867757
+f1:		    0.9569578795318406
+
+Name:		Aug48/model_83.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetAug
+Acc:		98.70050451001376
+f1:		    0.9763869388287736
+
+Name:		Aug43/model_114.pth
+Trained on:	DatasetAug
+Tested on:	DatasetDiff
+Acc:		91.03348111909494
+f1:		    0.8118705761693166
+
+Name:		Aug48/model_83.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		96.3114037643494
+f1:		    0.9498888889119915
+
+Name:		Diff48/model_136.pth
+Trained on:	DatasetDiff
+Tested on:	DatasetTesting
+Acc:		94.07377192471301
+f1:		    0.9191129130001583
+
+Name:		Base48/model_136.pth
+Trained on:	DatasetAug
+Tested on:	DatasetTesting
+Acc:		91.1193986364431
+f1:		    0.8842358773614931
+
+Name:		Aug43/model_114.pth
+Trained on:	DatasetAug
+Tested on:	DatasetTesting
+Acc:		89.07989044927452
+f1:		    0.7941297003491657
+
+Name:		Inc48/extended_model_1.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		74.52945632538896
+f1:		    0.7559869478169707
+
+Name:		Inc48/extended_model_1.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetAug
+Acc:		80.68338174591041
+f1:		    0.8170508588518318
+
+Name:		Incf48/model_10.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetAug
+Acc:		98.38709677419355
+f1:		    0.9734421604307618
+
+Name:		Incf48/model_10.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		94.61569838587495
+f1:		    0.9280009966675108
+
+Name:		Incf48/model_16.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		95.279995338267
+f1:		    0.9371626799408973
+
+Name:		Incf48/model_26.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		95.76947730318746
+f1:		    0.9447845205761677
+
+Name:		Aug48/model_12.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		91.90023891381621
+f1:		    0.8978842479156312
+
+Name:		Aug48/model_32.pth
+Trained on:	DatasetAug + Transforms in Model
+Tested on:	DatasetTesting
+Acc:		94.77303187459938
+f1:		    0.9285275445048375

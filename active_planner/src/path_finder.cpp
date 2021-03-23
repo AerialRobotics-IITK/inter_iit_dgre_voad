@@ -3,7 +3,7 @@
 namespace local_planner {
 
 void PointSampler::init(const Eigen::Vector3d& start, const Eigen::Vector3d& end) {
-    region_ = Eigen::Vector3d(0.5, 1.0, 0.5);
+    region_ = Eigen::Vector3d(0.5, 1.0, 1.0);
     region_(0) += 0.5 * (end - start).norm();
     translation_ = 0.5 * (start + end);
 

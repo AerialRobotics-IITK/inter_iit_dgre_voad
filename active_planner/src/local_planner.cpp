@@ -186,7 +186,7 @@ void LocalPlanner::run() {
             geometry_msgs::PoseStamped setpt;
 
             double curr_yaw = mav_msgs::yawFromQuaternion(target.orientation_W_B);
-            target.orientation_W_B = mav_msgs::quaternionFromYaw(M_PI - curr_yaw);
+            target.orientation_W_B = mav_msgs::quaternionFromYaw(std::max(M_PI - curr_yaw, curr_yaw));
 
             // double temp = target.orientation_W_B.z();
             // if (curr_yaw < 0) {
