@@ -11,8 +11,8 @@ frame_id: map                     # Global fixed frame id.
 local_frame_id: base_link               # Frame name for the quadrotor base.
 
 # robot constraints
-robot_radius: 0.8                  # Robot sphere radius, to be used for planning,  in metres.
-traversability_radius: 0.8         # Radius in metres, of the space around the robot to be considered as occupied.
+robot_radius: 0.4                  # Robot sphere radius, to be used for planning,  in metres.
+traversability_radius: 0.4         # Radius in metres, of the space around the robot to be considered as occupied.
                                     # Recommended value: equal to robot_radius
 voxel_size: 0.2                     # Size of each voxel, in *meters*.
 split_at_collisions: true           # Split smooth path at collisions.

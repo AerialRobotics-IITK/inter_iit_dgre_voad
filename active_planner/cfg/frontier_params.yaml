@@ -12,5 +12,5 @@ upper_range: -0.2                         # Only consider those points for front
 lower_range: 0.8                          # whose height lies in ($slice_level - $lower_range, $slice_level + $upper_range)
 voxel_size: 0.2                           # size of voxels used in maps, in *meters*
 visualize: true                           # whether to publish RViz visualizations
-clear_radius: 0.0                         # Radius of sphere around the MAV to consider as free, in *meters*
+clear_radius: 0.4                         # Radius of sphere around the MAV to consider as free, in *meters*
 update_frontiers_every_n_sec: 0.25        # Set frontier update rate, in *seconds*

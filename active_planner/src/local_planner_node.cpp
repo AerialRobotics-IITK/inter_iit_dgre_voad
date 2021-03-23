@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
     LocalPlanner planner(nh, nh_private);
 
-    ros::Rate loop_rate(20);
+    ros::Rate loop_rate(40);
 
     while (ros::ok() && !planner.readyForExit()) {
         ros::spinOnce();

@@ -62,7 +62,7 @@ class LocalPlanner {
     }
 
     Trajectory generateTrajectoryThroughWaypoints(const Path& waypoints);
-    void applyYawToTrajectory(Trajectory& trajectory, const YawPolicy& policy = YawPolicy::CONSTANT);
+    void applyYawToTrajectory(Trajectory& trajectory, const YawPolicy& policy = YawPolicy::POINT_FACING);
 
     Eigen::Vector3d getBestFrontier();
 

@@ -39,10 +39,13 @@ geometry_msgs::Point LocalPlanner::convertEigenToGeometryMsg(const Eigen::Vector
 
 Eigen::Vector3d LocalPlanner::getBestFrontier() {
     geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
+    double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
     double max_distance = DBL_MIN;
     Eigen::Vector3d best_f;
     for (auto frontier : frontiers_) {
-        double distance = norm(curr_pos, convertEigenToGeometryMsg(frontier.center));
+        Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
+        double distance = cos(yaw) * vector.x() + sin(yaw) * vector.y();
+        ROS_INFO_STREAM(distance);
         if (distance > max_distance) {
             if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
                 max_distance = distance;
@@ -50,18 +53,39 @@ Eigen::Vector3d LocalPlanner::getBestFrontier() {
             }
         }
     }
+    ROS_INFO_STREAM("BRUH: " << max_distance << " " << yaw);
     return best_f;
 }
 
 void LocalPlanner::run() {
+    frontiers_.clear();
+    trajectory_.clear();
+    frontier_path_.clear(); 
+
     if (waypoint_queue_.empty()) {
-        frontiers_.clear();
         evaluator_.findFrontiers();
         frontiers_ = evaluator_.getFrontiers();
 
         ROS_INFO_STREAM("Found " << frontiers_.size() << " frontiers");
         Eigen::Vector3d waypoint = getBestFrontier();
 
+        if(waypoint.norm() < voxel_size_){
+            ROS_WARN("No explorable frontier!");
+            geometry_msgs::PoseStamped turn_msg;
+            turn_msg.header.stamp = ros::Time::now();
+            geometry_msgs::Quaternion orig = odometry_.pose.pose.orientation;
+            turn_msg.pose.position = odometry_.pose.pose.position;
+            turn_msg.pose.orientation.x = -orig.x;
+            turn_msg.pose.orientation.y = -orig.y;
+            turn_msg.pose.orientation.z = -orig.z;
+            turn_msg.pose.orientation.w = -orig.w;
+
+            command_pub_.publish(turn_msg);
+            ros::Duration(1.0).sleep();
+            ros::spinOnce();
+            turn_msg.pose.orientation = orig;
+            command_pub_.publish(turn_msg);
+        }
         ROS_INFO_STREAM("Pursuing new frontier" << waypoint);
 
         waypoint_queue_.push(waypoint);
@@ -85,9 +109,12 @@ void LocalPlanner::run() {
             visited_frontiers_[getHash(waypt)] = waypt;
         }
 
-        ros::Rate pub_rate(20);
+        ros::Rate pub_rate(40);
         for (auto target : trajectory_) {
             geometry_msgs::PoseStamped setpt;
+            double temp = target.orientation_W_B.z();
+            target.orientation_W_B.z() = -target.orientation_W_B.w();
+            target.orientation_W_B.w() = temp;
             mav_msgs::msgPoseStampedFromEigenTrajectoryPoint(target, &setpt);
             command_pub_.publish(setpt);
             ROS_INFO("Published next waypoint!");
@@ -101,17 +128,24 @@ void LocalPlanner::run() {
 
                 if (pathfinder_.isLineInCollision(start_odom.position_W, target.position_W)) {
                     ROS_WARN("Aborting current trajectory...");
+                    geometry_msgs::PoseStamped stop_pt;
+                    ros::spinOnce();
+                    stop_pt.pose = odometry_.pose.pose;
+                    stop_pt.header.stamp = ros::Time::now();
+                    command_pub_.publish(stop_pt);
                     feasible = false;
+                    trajectory_.clear();
                     break;
                 }
                 // ROS_INFO("Heading to next waypoint!");
-
+                command_pub_.publish(setpt);
                 pub_rate.sleep();
             }
 
             if (!feasible) {
                 trajectory_.clear();
                 frontier_path_.clear();
+                ros::spinOnce();
                 ROS_INFO("Aborting and looking for next frontier");
                 visited_frontiers_[getHash(waypt)] = waypt;
                 break;
@@ -120,7 +154,7 @@ void LocalPlanner::run() {
             // ROS_INFO("Processing next waypoint");
         }
 
-        ROS_INFO("Looking for next frontier");
+        ROS_INFO_STREAM("Looking for next frontier " << waypoint_queue_.size());
     }
 }
 
@@ -167,17 +201,20 @@ void LocalPlanner::applyYawToTrajectory(Trajectory& trajectory, const YawPolicy&
     if (trajectory.size() < 2) {
         return;
     }
-    double last_yaw = trajectory.front().getYaw();
+    double last_yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
+    ROS_INFO_STREAM(last_yaw);
 
     if (policy == YawPolicy::POINT_FACING) {
         for (auto i = 0; i < trajectory.size() - 1; i++) {
-            Eigen::Vector3d heading = trajectory[i + 1].position_W - trajectory[i].position_W;
+            Eigen::Vector3d heading = (trajectory[i+1].position_W - trajectory[i].position_W).normalized();
+            Eigen::Vector3d plane_heading(heading.x(), heading.y(), 0);
             double desired_yaw = 0.0;
             if (std::fabs(heading.x()) > 1e-4 || std::fabs(heading.y()) > 1e-4) {
-                desired_yaw = std::atan2(heading.y(), heading.x());
+                desired_yaw = std::acos(heading.dot(plane_heading.normalized()));
             } else {
                 desired_yaw = last_yaw;
             }
+            ROS_INFO_STREAM(desired_yaw);
             trajectory[i].setFromYaw(desired_yaw);
             last_yaw = desired_yaw;
         }

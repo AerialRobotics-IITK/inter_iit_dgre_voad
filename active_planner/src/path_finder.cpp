@@ -100,7 +100,7 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
                     end_node_id = node->getID();
                 }
             }
-            ROS_INFO_STREAM(end_node_id);
+            // ROS_INFO_STREAM(end_node_id);
         }
 
         searchPath(0, end_node_id);
@@ -113,12 +113,12 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
 
     shortenPath();
     if (!short_path_.empty()) {
-        // if (visualize_) {
-        // visualizer_.visualizePath("short_path", short_path_, "map", Visualizer::ColorType::GREEN, 0.1);
-        // }
+        if (visualize_) {
+            visualizer_.visualizePath("short_path", short_path_, "map", Visualizer::ColorType::GREEN, 0.1);
+        }
         path_ = short_path_;
     } else {
-    path_ = raw_path_;
+        path_ = raw_path_;
     }
     ROS_INFO_STREAM("PATH" << path_.size());
 }
@@ -207,7 +207,7 @@ void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
                 curr_index = parent[curr_index];
             }
 
-            // curr_path.push_back(graph_[start_index]->getPosition());
+            curr_path.push_back(graph_[start_index]->getPosition());
             std::reverse(curr_path.begin(), curr_path.end());
             raw_path_ = curr_path;
             ROS_INFO_STREAM("RAWIN: " << raw_path_.size());
@@ -244,7 +244,14 @@ void PathFinder::shortenPath() {
 }
 
 void PathFinder::findMaximalIndices(const uint& start, const uint& end) {
+    // ROS_WARN_STREAM(start << " " << end);
     if (start >= end || start >= retain_.size() || end >= retain_.size()) {
+        return;
+    }
+
+    if (end == start + 1) {
+        retain_[start] = false;
+        retain_[end] = true;
         return;
     }
 

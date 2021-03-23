@@ -80,7 +80,7 @@ void FrontierEvaluator::findFrontiers() {
             Eigen::Vector3d coord = block.computeCoordinatesFromLinearIndex(linear_index).cast<double>();
 
             if (isFrontierVoxel(coord)) {
-                coord(2, 0) = slice_level_;
+                // coord(2, 0) = slice_level_;
                 hash_map_[getHash(coord)] = coord;
             }
         }
