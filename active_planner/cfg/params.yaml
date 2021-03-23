@@ -1,0 +1,19 @@
+# General Purpose Parameters
+
+# debug flags
+verbose_planner: true                      # Print additional debug and timing information.
+visualize_path: true                     # Whether to publish information for visualization in RViz.
+visualize_planner: true
+# frames
+world_frame: map                  # The base frame used when looking up tf transforms.
+                                    # This is also the frame that most outputs are given in.
+frame_id: map                     # Global fixed frame id.
+local_frame_id: base_link               # Frame name for the quadrotor base.
+
+# robot constraints
+robot_radius: 0.5                  # Robot sphere radius, to be used for planning,  in metres.
+traversability_radius: 0.5         # Radius in metres, of the space around the robot to be considered as occupied.
+                                    # Recommended value: equal to robot_radius
+voxel_size: 0.2                     # Size of each voxel, in *meters*.
+num_neighbours: 4                   # Number of neighbours for each point in the constructed graph for path finding
+          

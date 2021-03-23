@@ -30,7 +30,7 @@
           </geometry>
         </collision> -->
       <visual name='depth_cam_link'>
-    	<pose>0 0 0.15 0 0 0</pose>
+    	<pose>0 0 0.15 0 0.2 0</pose>
     	<geometry>
     		<cylinder>
     			<radius>.005</radius>
