@@ -249,7 +249,7 @@ void PathFinder::findMaximalIndices(const uint& start, const uint& end) {
         return;
     }
 
-    if (end == start + 1) {
+    if (end == start + 1 || (raw_path_[start] - raw_path_[end]).norm() < voxel_size_) {
         retain_[start] = false;
         retain_[end] = true;
         return;
