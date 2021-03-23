@@ -6,11 +6,11 @@ accurate_frontiers: false                  # True: explicitly compute all fronti
                                           # False: estimate frontier voxels by checking only some neighbors (detection
                                           # depends on previous views)
 checking_distance: 1.0                    # Distance in *voxelsizes* where we check for known voxels
-occupancy_distance: 2.5                   # Distance in *voxelsizes* upto which voxels near the surface are marked as occupied
+occupancy_distance: 2.0                   # Distance in *voxelsizes* upto which voxels near the surface are marked as occupied
 slice_level: 2.5                          # Height at which the ESDF slice is provided, in *meters*
-min_frontier_size: 3                      # Minimum points required in a frontier
-upper_range: -0.2                         # Only consider those points for frontiers
-lower_range: 0.8                          # whose height lies in ($slice_level - $lower_range, $slice_level + $upper_range)
+min_frontier_size: 5                      # Minimum points required in a frontier
+upper_range: 1.5                         # Only consider those points for frontiers
+lower_range: 1.5                          # whose height lies in ($slice_level - $lower_range, $slice_level + $upper_range)
 clear_radius: 0.5                         # Radius of sphere around the MAV to consider as free, in *meters*
 update_frontiers_every_n_sec: 0.1        # Set frontier update rate, in *seconds*
            

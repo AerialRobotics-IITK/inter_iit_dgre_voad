@@ -227,7 +227,7 @@ void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
                 curr_index = parent[curr_index];
             }
 
-            curr_path.push_back(graph_[start_index]->getPosition());
+            // curr_path.push_back(graph_[start_index]->getPosition());
             std::reverse(curr_path.begin(), curr_path.end());
             raw_path_ = curr_path;
             return;

@@ -70,6 +70,7 @@ class LocalPlanner {
     bool checkForAbort(const uint i, Trajectory& trajectory);
 
     Eigen::Vector3d getBestFrontier();
+    Eigen::Vector3d getBestFrontierFromCache();
 
     ros::ServiceServer activate_server_;
     ros::ServiceServer exit_server_;

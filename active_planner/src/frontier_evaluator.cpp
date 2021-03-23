@@ -238,7 +238,7 @@ void FrontierEvaluator::visualizeFrontierPoints() {
             points.push_back(point);
         }
     }
-    visualizer_.visualizePoints("frontiers", points, frame_id_, Visualizer::ColorType::WHITE, 0.1);
+    visualizer_.visualizePoints("frontiers", points, frame_id_, Visualizer::ColorType::WHITE, 0.5);
 }
 
 void FrontierEvaluator::visualizeFrontierCenters() {

@@ -44,13 +44,45 @@ geometry_msgs::Point LocalPlanner::convertEigenToGeometryMsg(const Eigen::Vector
 
 Eigen::Vector3d LocalPlanner::getBestFrontier() {
     geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
+    // mav_msgs::EigenOdometry start_odom;
+    // mav_msgs::eigenOdometryFromMsg(odometry_, &start_odom);
     double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
     double max_distance = DBL_MIN;
     Eigen::Vector3d best_f = Eigen::Vector3d::Zero();
     for (auto frontier : frontiers_) {
         Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
-        double distance = std::cos(yaw) * vector.x() + std::sin(yaw) * vector.y();
-        ROS_INFO_STREAM(distance);
+        double distance = std::cos(yaw) * vector.x() + std::sin(yaw) * vector.y() - std::fabs(vector.z());
+        if (distance > max_distance) {
+            // pathfinder_.findPath(start_odom, frontier.center);
+            // Path f_path = pathfinder_.getPath();
+            if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
+                // if(f_path.size() > 0){
+                max_distance = distance;
+                best_f = frontier.center;
+                // }
+            }
+        }
+    }
+    for (auto& frontier : frontiers_) {
+        frontier_cache_.push_back(frontier);
+    }
+    return best_f;
+}
+
+Eigen::Vector3d LocalPlanner::getBestFrontierFromCache() {
+    geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
+    double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
+    double max_distance = DBL_MIN;
+
+    Eigen::Vector3d best_f = Eigen::Vector3d::Zero();
+
+    if (verbose_) {
+        ROS_WARN("Fetching frontiers from cache.");
+    }
+
+    for (auto frontier : frontier_cache_) {
+        Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
+        double distance = std::cos(yaw) * vector.x() + std::sin(yaw) * vector.y() - std::fabs(vector.z());
         if (distance > max_distance) {
             if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
                 max_distance = distance;
@@ -58,28 +90,6 @@ Eigen::Vector3d LocalPlanner::getBestFrontier() {
             }
         }
     }
-    if (best_f.norm() < voxel_size_) {
-        if (verbose_) {
-            ROS_WARN("Fetching frontiers from cache.");
-            double max_distance = DBL_MIN;
-
-            for (auto frontier : frontier_cache_) {
-                Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
-                double distance = cos(yaw) * vector.x() + sin(yaw) * vector.y();
-                ROS_INFO_STREAM(distance);
-                if (distance > max_distance) {
-                    if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
-                        max_distance = distance;
-                        best_f = frontier.center;
-                    }
-                }
-            }
-        }
-    }
-    for (auto& frontier : frontiers_) {
-        frontier_cache_.push_back(frontier);
-    }
-    ROS_INFO_STREAM("BRUH: " << max_distance << " " << yaw);
     return best_f;
 }
 
@@ -112,13 +122,26 @@ void LocalPlanner::run() {
 
             geometry_msgs::Quaternion orig = odometry_.pose.pose.orientation;
             turn_msg.pose.position = odometry_.pose.pose.position;
-            turn_msg.pose.orientation.x = orig.x;
-            turn_msg.pose.orientation.y = orig.y;
-            turn_msg.pose.orientation.z = -orig.w;
-            turn_msg.pose.orientation.w = orig.z;
+            double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(orig));
+            auto new_yaw = mav_msgs::quaternionFromYaw(yaw + M_PI_2);
+            turn_msg.pose.orientation.x = new_yaw.x();
+            turn_msg.pose.orientation.y = new_yaw.y();
+            turn_msg.pose.orientation.z = new_yaw.z();
+            turn_msg.pose.orientation.w = new_yaw.w();
+
             command_pub_.publish(turn_msg);
 
-            ros::Duration(1.0).sleep();
+            ros::Duration(2.0).sleep();
+            ros::spinOnce();
+
+            new_yaw = mav_msgs::quaternionFromYaw(yaw - M_PI_2);
+            turn_msg.pose.orientation.x = new_yaw.x();
+            turn_msg.pose.orientation.y = new_yaw.y();
+            turn_msg.pose.orientation.z = new_yaw.z();
+            turn_msg.pose.orientation.w = new_yaw.w();
+            command_pub_.publish(turn_msg);
+
+            ros::Duration(2.0).sleep();
             ros::spinOnce();
 
             turn_msg.pose.orientation = orig;
@@ -161,9 +184,20 @@ void LocalPlanner::run() {
         for (auto i = 0; i < trajectory_.size(); i++) {
             auto target = trajectory_[i];
             geometry_msgs::PoseStamped setpt;
-            double temp = target.orientation_W_B.z();
-            target.orientation_W_B.z() = -target.orientation_W_B.w();
-            target.orientation_W_B.w() = temp;
+
+            double curr_yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
+            target.orientation_W_B = mav_msgs::quaternionFromYaw(-curr_yaw);
+
+            // double temp = target.orientation_W_B.z();
+            // if (curr_yaw < 0) {
+            // target.orientation_W_B.z() = -target.orientation_W_B.w()
+            // target.orientation_W_B.w() = temp;
+            // } else  {
+            // target.orientation_W_B.z() = target.orientation_W_B.w();
+            // target.orientation_W_B.w() = -temp;
+            // }
+            // target.orientation_W_B.w() = -target.orientation_W_B.w();
+
             mav_msgs::msgPoseStampedFromEigenTrajectoryPoint(target, &setpt);
             command_pub_.publish(setpt);
 
