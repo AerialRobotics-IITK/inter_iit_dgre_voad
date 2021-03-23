@@ -26,7 +26,7 @@ void PointSampler::expandRegion(const double& size) {
 }
 
 PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
-    : server_(nh, nh_private)
+    : server_(nh, ros::NodeHandle("pathfinder"))
     , sampler_()
     , p_sample_(10)
     , expand_region_(false)

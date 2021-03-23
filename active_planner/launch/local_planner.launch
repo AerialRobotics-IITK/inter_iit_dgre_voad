@@ -6,11 +6,18 @@
       <rosparam file="$(find active_planner)/cfg/frontier_params.yaml"     command="load"/>
       <rosparam file="$(find active_planner)/cfg/params.yaml" command="load"/>
 
-      <remap from="pointcloud"                         to="/depth_camera/depth/points"/>
-      <remap from="voxblox_local_planner/esdf_map_out" to="esdf_map" />
-      <remap from="voxblox_local_planner/tsdf_map_out" to="tsdf_map" />
+      <remap from="voxblox_local_planner/esdf_map_in" to="esdf_map" />
+      <remap from="voxblox_local_planner/tsdf_map_in" to="tsdf_map" />
+      <remap from="/pathfinder/esdf_map_in" to="esdf_map" />
+      <remap from="/pathfinder/tsdf_map_in" to="tsdf_map" />
+     
       <remap from="odometry"                           to="/mavros/local_position/odom"/>
       <remap from="command/pose"                           to="/mavros/setpoint_position/local"/>
     </node>
+
+    <group ns="pathfinder">
+        <rosparam file="$(find active_planner)/cfg/params.yaml" command="load"/>
+        <rosparam file="$(find active_planner)/cfg/voxblox_params.yaml"     command="load"/>
+    </group>
 
 </launch>

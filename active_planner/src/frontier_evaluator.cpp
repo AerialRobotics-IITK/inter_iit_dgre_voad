@@ -135,14 +135,15 @@ bool FrontierEvaluator::isFrontierVoxel(const Eigen::Vector3d& voxel) {
     }
 
     VoxelState voxel_state;
+    int num_unknown = 0;
     for (auto& neighbour : neighbor_voxels_) {
         voxel_state = getVoxelState(voxel + neighbour);
         if (voxel_state == VoxelState::UNKNOWN) {
-            return true;
+            num_unknown++;
         }
     }
 
-    return false;
+    return (num_unknown > 1);
 }
 
 VoxelState FrontierEvaluator::getVoxelState(const Eigen::Vector3d& point) {

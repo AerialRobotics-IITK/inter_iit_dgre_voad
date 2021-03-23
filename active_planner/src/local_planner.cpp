@@ -49,7 +49,7 @@ Eigen::Vector3d LocalPlanner::getBestFrontier() {
     Eigen::Vector3d best_f = Eigen::Vector3d::Zero();
     for (auto frontier : frontiers_) {
         Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
-        double distance = cos(yaw) * vector.x() + sin(yaw) * vector.y();
+        double distance = std::cos(yaw) * vector.x() + std::sin(yaw) * vector.y();
         ROS_INFO_STREAM(distance);
         if (distance > max_distance) {
             if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
@@ -57,6 +57,27 @@ Eigen::Vector3d LocalPlanner::getBestFrontier() {
                 best_f = frontier.center;
             }
         }
+    }
+    if (best_f.norm() < voxel_size_) {
+        if (verbose_) {
+            ROS_WARN("Fetching frontiers from cache.");
+            double max_distance = DBL_MIN;
+
+            for (auto frontier : frontier_cache_) {
+                Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
+                double distance = cos(yaw) * vector.x() + sin(yaw) * vector.y();
+                ROS_INFO_STREAM(distance);
+                if (distance > max_distance) {
+                    if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
+                        max_distance = distance;
+                        best_f = frontier.center;
+                    }
+                }
+            }
+        }
+    }
+    for (auto& frontier : frontiers_) {
+        frontier_cache_.push_back(frontier);
     }
     ROS_INFO_STREAM("BRUH: " << max_distance << " " << yaw);
     return best_f;
@@ -153,7 +174,7 @@ void LocalPlanner::run() {
             ros::spinOnce();
             bool feasible = true;
 
-            while (ros::ok() && (norm(odometry_.pose.pose.position, convertEigenToGeometryMsg(target.position_W)) > voxel_size_)) {
+            while (ros::ok() && (norm(odometry_.pose.pose.position, convertEigenToGeometryMsg(target.position_W)) > robot_radius_)) {
                 ros::spinOnce();
                 mav_msgs::EigenOdometry start_odom;
                 mav_msgs::eigenOdometryFromMsg(odometry_, &start_odom);

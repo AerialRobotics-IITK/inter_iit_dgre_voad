@@ -60,9 +60,8 @@ class LocalPlanner {
         return true;
     }
 
-    bool exitCallback(std_srvs::EmptyRequest& req, std_srvs::SetBoolResponse& resp) {
+    bool exitCallback(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp) {
         exit_ = true;
-        resp.success = true;
         return true;
     }
 
@@ -93,6 +92,7 @@ class LocalPlanner {
     std::stack<Eigen::Vector3d> waypoint_queue_;
     std::vector<FrontierEvaluator::FrontierCenter> frontiers_;
     std::unordered_map<std::string, Eigen::Vector3d> visited_frontiers_;
+    std::vector<FrontierEvaluator::FrontierCenter> frontier_cache_;
 
     Trajectory trajectory_;
     PathFinder pathfinder_;
