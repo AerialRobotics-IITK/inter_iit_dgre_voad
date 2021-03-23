@@ -6,7 +6,7 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
     : esdf_server_(nh, nh_private) {
     nh_private.getParam("accurate_frontiers", accurate_frontiers_);
     nh_private.getParam("checking_distance", checking_dist_);
-    nh_private.getParam("visualize", visualize_);
+    nh_private.getParam("visualize_frontier", visualize_);
     nh_private.getParam("frame_id", frame_id_);
     nh_private.getParam("occupancy_distance", occupancy_distance_);
     nh_private.getParam("slice_level", slice_level_);
@@ -14,8 +14,6 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
     nh_private.getParam("lower_range", lower_range_);
     nh_private.getParam("min_frontier_size", min_frontier_size_);
     nh_private.getParam("robot_radius", robot_radius_);
-
-    CHECK(esdf_server_.getTsdfMapPtr());
 
     esdf_server_.setTraversabilityRadius(robot_radius_);
 
@@ -80,7 +78,6 @@ void FrontierEvaluator::findFrontiers() {
             Eigen::Vector3d coord = block.computeCoordinatesFromLinearIndex(linear_index).cast<double>();
 
             if (isFrontierVoxel(coord)) {
-                // coord(2, 0) = slice_level_;
                 hash_map_[getHash(coord)] = coord;
             }
         }
@@ -195,7 +192,6 @@ void FrontierEvaluator::visualizeVoxelStates() {
     if (!visualize_) {
         return;
     }
-    // TODO: expensive to do this, try to simplify
 
     size_t vps = esdf_server_.getTsdfMapPtr()->getTsdfLayerPtr()->voxels_per_side();
     size_t num_voxels_per_block = vps * vps * vps;
@@ -241,7 +237,7 @@ void FrontierEvaluator::visualizeFrontierPoints() {
             points.push_back(point);
         }
     }
-    visualizer_.visualizePoints("frontiers", points, frame_id_, Visualizer::ColorType::WHITE);
+    visualizer_.visualizePoints("frontiers", points, frame_id_, Visualizer::ColorType::WHITE, 0.1);
 }
 
 void FrontierEvaluator::visualizeFrontierCenters() {

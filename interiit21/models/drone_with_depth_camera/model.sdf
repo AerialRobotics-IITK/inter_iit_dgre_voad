@@ -30,7 +30,7 @@
           </geometry>
         </collision> -->
       <visual name='depth_cam_link'>
-    	<pose>0 0 0.15 0 0 0</pose>
+    	<pose>0 0 0.15 0 0.2 0</pose>
     	<geometry>
     		<cylinder>
     			<radius>.005</radius>
@@ -39,7 +39,7 @@
     	</geometry>
       </visual>
     
-    <!-- <gazebo reference="depth_cam_link"> -->
+    <!-- <gazebo reference="depth_cam_lin3k"> -->
       <sensor name="depth_camera" type="depth">
         <update_rate>20</update_rate>
         <always_on>1</always_on>

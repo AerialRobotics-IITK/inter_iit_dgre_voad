@@ -86,6 +86,7 @@ class PathFinder {
     uint p_sample_;
     int num_neighbours_;
 
+    bool verbose_;
     bool visualize_;
     bool inc_density_;
     bool inflate_radius_;

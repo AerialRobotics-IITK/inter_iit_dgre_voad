@@ -1,15 +1,16 @@
 #pragma once
 
+#include <stack>
+#include <unordered_map>
+
 #include <Eigen/Eigen>
 #include <mav_msgs/conversions.h>
 #include <mav_msgs/eigen_mav_msgs.h>
 #include <nav_msgs/Odometry.h>
-#include <stack>
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
 #include <std_srvs/SetBool.h>
 #include <tf/tf.h>
-#include <unordered_map>
 
 #include <active_planner/frontier_evaluator.hpp>
 #include <active_planner/path_finder.hpp>
@@ -22,15 +23,19 @@ typedef mav_msgs::EigenTrajectoryPointVector Trajectory;
 class LocalPlanner {
   public:
     LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private);
+
     bool readyForExit() {
         return exit_;
     }
+
     bool isActive() {
         return active_;
     }
+
     void setConstantYaw(const double& yaw) {
         const_yaw_ = yaw;
     }
+
     void run();
 
   private:
@@ -63,6 +68,7 @@ class LocalPlanner {
 
     Trajectory generateTrajectoryThroughWaypoints(const Path& waypoints);
     void applyYawToTrajectory(Trajectory& trajectory, const YawPolicy& policy = YawPolicy::POINT_FACING);
+    bool checkForAbort(const uint i, Trajectory& trajectory);
 
     Eigen::Vector3d getBestFrontier();
 
@@ -79,7 +85,6 @@ class LocalPlanner {
 
     double robot_radius_;
     double voxel_size_;
-    double sampling_dt_;
     double const_yaw_;
 
     nav_msgs::Odometry odometry_;

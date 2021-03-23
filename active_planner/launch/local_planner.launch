@@ -2,9 +2,9 @@
 <launch>
 
     <node name="voxblox_local_planner" pkg="active_planner" type="local_planner_node" output="screen" clear_params="true" respawn="false">
-      <rosparam file="$(find active_planner)/cfg/params.yaml" command="load"/>
       <rosparam file="$(find active_planner)/cfg/voxblox_params.yaml"     command="load"/>
       <rosparam file="$(find active_planner)/cfg/frontier_params.yaml"     command="load"/>
+      <rosparam file="$(find active_planner)/cfg/params.yaml" command="load"/>
 
       <remap from="pointcloud"                         to="/depth_camera/depth/points"/>
       <remap from="voxblox_local_planner/esdf_map_out" to="esdf_map" />

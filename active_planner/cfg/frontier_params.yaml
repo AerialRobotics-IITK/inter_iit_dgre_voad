@@ -1,5 +1,6 @@
 # Frontier Exploration Parameters
 
+visualize_frontier: true                           # whether to publish RViz visualizations
 accurate_frontiers: false                  # True: explicitly compute all frontier voxels
                                           # (may degrade performance),
                                           # False: estimate frontier voxels by checking only some neighbors (detection
@@ -10,7 +11,6 @@ slice_level: 2.5                          # Height at which the ESDF slice is pr
 min_frontier_size: 3                      # Minimum points required in a frontier
 upper_range: -0.2                         # Only consider those points for frontiers
 lower_range: 0.8                          # whose height lies in ($slice_level - $lower_range, $slice_level + $upper_range)
-voxel_size: 0.2                           # size of voxels used in maps, in *meters*
-visualize: true                           # whether to publish RViz visualizations
-clear_radius: 0.4                         # Radius of sphere around the MAV to consider as free, in *meters*
-update_frontiers_every_n_sec: 0.25        # Set frontier update rate, in *seconds*
+clear_radius: 0.5                         # Radius of sphere around the MAV to consider as free, in *meters*
+update_frontiers_every_n_sec: 0.1        # Set frontier update rate, in *seconds*
+           

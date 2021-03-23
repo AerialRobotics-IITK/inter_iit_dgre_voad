@@ -1,11 +1,12 @@
 #pragma once
 
-#include <Eigen/Core>
-#include <active_planner/visualizer.hpp>
-#include <glog/logging.h>
 #include <unordered_map>
+
+#include <Eigen/Core>
 #include <voxblox/core/tsdf_map.h>
 #include <voxblox_ros/esdf_server.h>
+
+#include <active_planner/visualizer.hpp>
 
 namespace local_planner {
 

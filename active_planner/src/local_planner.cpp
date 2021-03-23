@@ -7,14 +7,17 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     , evaluator_(nh, nh_private)
     , active_(false)
     , exit_(false)
+    , verbose_(false)
     , const_yaw_(3.14) {
-    nh_private.getParam("visualize", visualize_);
+    nh_private.getParam("visualize_planner", visualize_);
     nh_private.getParam("robot_radius", robot_radius_);
     nh_private.getParam("voxel_size", voxel_size_);
-    nh_private.getParam("sampling_dt", sampling_dt_);
+    nh_private.getParam("verbose_planner", verbose_);
 
-    // pathfinder_ = PathFinder(new PathFinder(nh, nh_private, &server_));
-    // evaluator_ = FrontierEvaluator(new FrontierEvaluator(nh, nh_private, &server_));
+    ROS_INFO_STREAM(verbose_);
+    ROS_INFO_STREAM(visualize_);
+    verbose_ = true;
+    visualize_ = true;
 
     odom_sub_ = nh.subscribe("odometry", 1, &LocalPlanner::odometryCallback, this);
     command_pub_ = nh.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
@@ -23,6 +26,8 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
 
     if (visualize_) {
         visualizer_.init(nh, nh_private);
+        visualizer_.createPublisher("occupied_path");
+        visualizer_.createPublisher("free_path");
         visualizer_.createPublisher("trajectory");
     }
 }
@@ -41,7 +46,7 @@ Eigen::Vector3d LocalPlanner::getBestFrontier() {
     geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
     double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
     double max_distance = DBL_MIN;
-    Eigen::Vector3d best_f;
+    Eigen::Vector3d best_f = Eigen::Vector3d::Zero();
     for (auto frontier : frontiers_) {
         Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
         double distance = cos(yaw) * vector.x() + sin(yaw) * vector.y();
@@ -66,29 +71,44 @@ void LocalPlanner::run() {
         evaluator_.findFrontiers();
         frontiers_ = evaluator_.getFrontiers();
 
-        ROS_INFO_STREAM("Found " << frontiers_.size() << " frontiers");
+        if (verbose_){
+            ROS_INFO_STREAM("Found " << frontiers_.size() << " frontiers");
+        }
+        
         Eigen::Vector3d waypoint = getBestFrontier();
+        if(verbose_){
+            ROS_WARN_STREAM(waypoint.norm());
+        }
 
         if(waypoint.norm() < voxel_size_){
-            ROS_WARN("No explorable frontier!");
+            if (verbose_) {
+                ROS_WARN("No explorable frontier! Spinning around once.");
+                visited_frontiers_[getHash(waypoint)] = waypoint;
+            }
+
             geometry_msgs::PoseStamped turn_msg;
             turn_msg.header.stamp = ros::Time::now();
+
             geometry_msgs::Quaternion orig = odometry_.pose.pose.orientation;
             turn_msg.pose.position = odometry_.pose.pose.position;
-            turn_msg.pose.orientation.x = -orig.x;
-            turn_msg.pose.orientation.y = -orig.y;
-            turn_msg.pose.orientation.z = -orig.z;
-            turn_msg.pose.orientation.w = -orig.w;
-
+            turn_msg.pose.orientation.x = orig.x;
+            turn_msg.pose.orientation.y = orig.y;
+            turn_msg.pose.orientation.z = -orig.w;
+            turn_msg.pose.orientation.w = orig.z;
             command_pub_.publish(turn_msg);
+
             ros::Duration(1.0).sleep();
             ros::spinOnce();
+
             turn_msg.pose.orientation = orig;
             command_pub_.publish(turn_msg);
+        } else {
+            
+            if (verbose_) {
+                ROS_INFO_STREAM("Pursuing new frontier: \n" << waypoint);
+            }
+            waypoint_queue_.push(waypoint);
         }
-        ROS_INFO_STREAM("Pursuing new frontier" << waypoint);
-
-        waypoint_queue_.push(waypoint);
     } else {
         Eigen::Vector3d waypt = waypoint_queue_.top();
         waypoint_queue_.pop();
@@ -104,20 +124,32 @@ void LocalPlanner::run() {
         frontier_path_ = pathfinder_.getPath();
         trajectory_ = generateTrajectoryThroughWaypoints(frontier_path_);
 
-        ROS_INFO_STREAM("Generated trajectory of " << trajectory_.size());
-        if (!trajectory_.empty()) {
-            visited_frontiers_[getHash(waypt)] = waypt;
+        if (verbose_) {
+            ROS_INFO_STREAM("Generated " << trajectory_.size() << " waypoints");
+        }
+
+        visited_frontiers_[getHash(waypt)] = waypt;
+        if (trajectory_.empty()) {
+            if(verbose_){
+                ROS_INFO("Current frontier not feasible.");
+                return;
+            }
         }
 
         ros::Rate pub_rate(40);
-        for (auto target : trajectory_) {
+        for (auto i = 0; i < trajectory_.size(); i++) {
+            auto target = trajectory_[i];
             geometry_msgs::PoseStamped setpt;
             double temp = target.orientation_W_B.z();
             target.orientation_W_B.z() = -target.orientation_W_B.w();
             target.orientation_W_B.w() = temp;
             mav_msgs::msgPoseStampedFromEigenTrajectoryPoint(target, &setpt);
             command_pub_.publish(setpt);
-            ROS_INFO("Published next waypoint!");
+
+            if (verbose_) {
+                ROS_INFO("Published next waypoint!");
+            }
+
             ros::spinOnce();
             bool feasible = true;
 
@@ -126,18 +158,32 @@ void LocalPlanner::run() {
                 mav_msgs::EigenOdometry start_odom;
                 mav_msgs::eigenOdometryFromMsg(odometry_, &start_odom);
 
-                if (pathfinder_.isLineInCollision(start_odom.position_W, target.position_W)) {
-                    ROS_WARN("Aborting current trajectory...");
+                if (checkForAbort(i, trajectory_)) {
+                    if (verbose_) {
+                        ROS_WARN("Aborting current trajectory...");
+                    }
+
                     geometry_msgs::PoseStamped stop_pt;
                     ros::spinOnce();
+
                     stop_pt.pose = odometry_.pose.pose;
                     stop_pt.header.stamp = ros::Time::now();
                     command_pub_.publish(stop_pt);
+
                     feasible = false;
                     trajectory_.clear();
+                    frontier_path_.clear();
+
+                    Eigen::Vector3d waypoint = getBestFrontier();
+                    if(waypoint.norm() > voxel_size_){
+                        if (verbose_) {
+                            ROS_INFO_STREAM("Pursuing new frontier: \n" << waypoint);
+                        }
+                        waypoint_queue_.push(waypoint);
+                    }
+
                     break;
                 }
-                // ROS_INFO("Heading to next waypoint!");
                 command_pub_.publish(setpt);
                 pub_rate.sleep();
             }
@@ -146,23 +192,53 @@ void LocalPlanner::run() {
                 trajectory_.clear();
                 frontier_path_.clear();
                 ros::spinOnce();
-                ROS_INFO("Aborting and looking for next frontier");
+                
+                if(verbose_){
+                    ROS_INFO("Aborted. Looking for next frontier");
+                }
+                
                 visited_frontiers_[getHash(waypt)] = waypt;
                 break;
             }
-
-            // ROS_INFO("Processing next waypoint");
         }
 
-        ROS_INFO_STREAM("Looking for next frontier " << waypoint_queue_.size());
+        if(verbose_){
+            ROS_INFO_STREAM("Looking for next frontier");
+        }
     }
+}
+
+bool LocalPlanner::checkForAbort(const uint i, Trajectory& trajectory){
+    bool need_abort = false;
+    uint occupied = 0;
+
+    std::vector<Eigen::Vector3d> free_points, occ_points;
+
+    double distance = 0.0;
+    for (auto j = i; j < (i+4) && j < trajectory.size(); j++) {
+        if (pathfinder_.getMapDistance(trajectory[j].position_W, distance) && distance < robot_radius_) {
+            occupied++;
+            if (visualize_) {
+                occ_points.push_back(trajectory[j].position_W);
+            }
+        } else if (visualize_) {
+            free_points.push_back(trajectory[j].position_W);
+        }
+    }
+
+    need_abort = (occupied > 0); 
+
+    if (visualize_) {
+        visualizer_.visualizePoints("occupied_path", occ_points, "map", Visualizer::ColorType::RED, 1);
+        visualizer_.visualizePoints("free_path", free_points, "map", Visualizer::ColorType::GREEN, 0.5);
+    }
+
+    return need_abort;
 }
 
 Trajectory LocalPlanner::generateTrajectoryThroughWaypoints(const Path& waypoints) {
     Trajectory traj;
     if (waypoints.empty()) {
-        ROS_INFO("Path is empty!");
-        // status_thread_ = std::async(std::launch::async, &LocalPlanner::setStatus, this, PlanStatus::FAILURE);
         return traj;
     }
 
@@ -171,24 +247,6 @@ Trajectory LocalPlanner::generateTrajectoryThroughWaypoints(const Path& waypoint
         traj_pt.position_W = waypoints[i];
         traj.push_back(traj_pt);
     }
-
-    // if (pathfinder_.getPathLength(waypoints) < 0.05) {
-    //     applyYawToTrajectory(traj);
-    //     if (visualize_) {
-    //         visualizer_.visualizeTrajectory("trajectory", traj, "map", Visualizer::ColorType::BLACK, 0.2);
-    //     }
-    //     return traj;
-    // }
-
-    // mav_trajectory_generation::Trajectory gen_traj;
-    // ros::spinOnce();
-
-    // TODO: Preserve velocities when switching waypoints
-    // bool success = smoother_.getTrajectoryBetweenWaypoints(eigen_waypts, &gen_traj);
-    // if (success) {
-    // mav_trajectory_generation::sampleWholeTrajectory(gen_traj, sampling_dt_, &traj);
-    // } else {
-    // }
 
     applyYawToTrajectory(traj);
     if (visualize_) {
@@ -202,7 +260,6 @@ void LocalPlanner::applyYawToTrajectory(Trajectory& trajectory, const YawPolicy&
         return;
     }
     double last_yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
-    ROS_INFO_STREAM(last_yaw);
 
     if (policy == YawPolicy::POINT_FACING) {
         for (auto i = 0; i < trajectory.size() - 1; i++) {
@@ -214,7 +271,6 @@ void LocalPlanner::applyYawToTrajectory(Trajectory& trajectory, const YawPolicy&
             } else {
                 desired_yaw = last_yaw;
             }
-            ROS_INFO_STREAM(desired_yaw);
             trajectory[i].setFromYaw(desired_yaw);
             last_yaw = desired_yaw;
         }

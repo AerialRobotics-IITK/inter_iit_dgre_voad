@@ -8,23 +8,9 @@
         <remap from="pointcloud" to="/depth_camera/depth/points"/>
         <remap from="voxblox_node/esdf_map_out" to="esdf_map" />
         <remap from="voxblox_node/tsdf_map_out" to="tsdf_map" />
-        <param name="tsdf_voxel_size" value="$(arg voxel_size)" />
-        <param name="tsdf_voxels_per_side" value="$(arg voxels_per_side)" />
-        <param name="publish_esdf_map" value="true" />
-        <param name="publish_pointclouds" value="true" />
-        <param name="use_tf_transforms" value="true" />
-        <param name="update_mesh_every_n_sec" value="1.0" />
-        <param name="clear_sphere_for_planning" value="true" />
-        <param name="world_frame" value="$(arg world_frame)" />
+
+        <rosparam file="$(find active_planner)/cfg/voxblox_params.yaml"     command="load"/>
+
       </node>
-<!-- 
-      <node name="my_voxblox_planner" pkg="voxblox_planner" type="my_voxblox_planner" output="screen" args="-alsologtostderr">
-        <remap from="odometry" to="great_estimator/odometry" />
-        <remap from="my_voxblox_planner/esdf_map_in" to="esdf_map" />
-        <param name="tsdf_voxel_size" value="$(arg voxel_size)" />
-        <param name="tsdf_voxels_per_side" value="$(arg voxels_per_side)" />
-        <param name="update_mesh_every_n_sec" value="0.0" />
-        <param name="world_frame" value="$(arg world_frame)" />
-      </node> -->
 
   </launch>

@@ -2,7 +2,7 @@
 <package format="2">
     <name>active_planner</name>
     <version>0.0.0</version>
-    <description>Sampling-based Online Informative Path Planning.</description>
+    <description>Sampling-based Online Frontier Exploration Path Planning.</description>
 
     <author email="aerialroboticsiitk@gmail.com">Aerial Robotics IITK</author>
 
@@ -13,23 +13,14 @@
     <buildtool_depend>catkin</buildtool_depend>
     <buildtool_depend>catkin_simple</buildtool_depend>
 
-    <depend>active_3d_planning_core</depend>
-    <depend>active_3d_planning_ros</depend>
-    <depend>active_3d_planning_mav</depend>
-    <depend>active_3d_planning_voxblox</depend>
     <depend>roscpp</depend>
-    <depend>rospy</depend>
     <depend>voxblox_ros</depend>
     <depend>voxblox</depend>
-    <depend>trajectory_msgs</depend>
     <depend>mav_msgs</depend>
     <depend>std_msgs</depend>
-    <depend>sensor_msgs</depend>
+    <depend>std_srvs</depend>
     <depend>geometry_msgs</depend>
     <depend>nav_msgs</depend>
-    <depend>message_generation</depend>
-    <depend>message_runtime</depend>
-    <depend>mav_trajectory_generation_ros</depend>
     <depend>tf</depend>
     <depend>visualization_msgs</depend>
 
