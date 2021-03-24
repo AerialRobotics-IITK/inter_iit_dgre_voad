@@ -14,7 +14,6 @@
   <build_depend>roscpp</build_depend>
 
   <depend>detector_msgs</depend>
-  <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>mavros_msgs</depend>

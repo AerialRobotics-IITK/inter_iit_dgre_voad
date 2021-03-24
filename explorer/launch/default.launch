@@ -2,9 +2,20 @@
 <launch>
     <arg name="quad_name" default="quadrotor" />
 
-    <include file="$(find interiit21)/launch/interiit_world1.launch"></include>
+    <arg name="world_name" default="testing_world1"/>
+    <arg name="ardupilot_path" default="$HOME/drdo_ws/src/ardupilot"/>
+    <arg name="ardupilot_gazebo_path" default="~/drdo_ws/src/ardupilot_gazebo"/>
+    <arg name="gui" default="true"/>
+    <arg name="verbose" default="true"/>
 
-    <node pkg="explorer" type="sim_vehicle.sh" name="sim_vehicle_node" />
+    <include file="$(find interiit21)/launch/world.launch">
+        <arg name="world_name" default="$(arg world_name)"/>
+        <arg name="ardupilot_gazebo_path" default="$(arg ardupilot_gazebo_path)"/>
+        <arg name="gui" default="$(arg gui)"/>
+        <arg name="verbose" default="$(arg verbose)"/>
+    </include>
+
+    <node pkg="explorer" type="sim_vehicle.sh" name="sim_vehicle_node" args="$(arg ardupilot_path)"/>
 
     <group ns="$(arg quad_name)">
         <node pkg="box_detector" type="box_detector_node" name="box_detector_node" output="screen">
@@ -22,6 +33,5 @@
             <remap from="setpoint"    to="/mavros/setpoint_position/local" />
         </node> -->
     </group>
-
 
 </launch>

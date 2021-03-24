@@ -2,9 +2,9 @@
 <launch>
     <arg name="quad_name" default="quadrotor" />
 
-    <include file="$(find active_planner)/launch/local_planner.launch"></include>
+    <include file="$(find active_planner)/launch/local_planner.launch"/>
 
-    <include file="$(find active_planner)/launch/server.launch"></include>
+    <include file="$(find active_planner)/launch/server.launch"/>
 
     <!-- <group ns="$(arg quad_name)"> -->
         <node pkg="explorer" type="explorer_node" name="explorer_node" output="screen">
