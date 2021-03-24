@@ -1,6 +1,6 @@
-t_cam: [0, 0, 0.02]
-cam_to_quad_rot: [0,-1,0,-1,0,0,0,0,-1]
-camera_matrix: [205.46963709898583, 0.0, 320.5, 0.0, 205.46963709898583, 240.5, 0.0, 0.0, 1.0]
+t_cam: [0, 0, 0.02]        # Translation matrix from quad to camera centre in meters
+cam_to_quad_rot: [0,-1,0,-1,0,0,0,0,-1]    # Rotation matrix to rotate vector from camera to quad frame
+camera_matrix: [205.46963709898583, 0.0, 320.5, 0.0, 205.46963709898583, 240.5, 0.0, 0.0, 1.0]   # Describes the mapping of a camera from 3D points in the world to 2D points
 verbose: true              # Make it true for debugging purposes.
-image_height: 480
-image_width: 848
+image_height: 480          # Height of the image
+image_width: 848           # Width of the image
