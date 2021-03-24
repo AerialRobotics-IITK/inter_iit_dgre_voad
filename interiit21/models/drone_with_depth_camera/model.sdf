@@ -12,7 +12,7 @@
     </include>
 
     <link name="depth_cam_link">
-      <pose>0.1 0 -0.02 0 0.6 0 </pose>
+      <pose>0.1 0 -0.02 0 0.0 0 </pose>
       <inertial>
         <mass>0.01</mass>
         <inertia>
@@ -68,7 +68,7 @@
           <frameName>camera_link_optical</frameName>
           <pointCloudCutoff>0.4</pointCloudCutoff>
           <!-- <pointCloudCutoffMax>3.0</pointCloudCutoffMax>  -->
-          <pointCloudCutoffMax>5.0</pointCloudCutoffMax> 
+          <pointCloudCutoffMax>10.0</pointCloudCutoffMax> 
           <distortionK1>0.0</distortionK1>
           <distortionK2>0.0</distortionK2>
           <distortionK3>0.0</distortionK3>

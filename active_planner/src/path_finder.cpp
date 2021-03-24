@@ -42,10 +42,6 @@ PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
 
     voxel_size_ = double(server_.getEsdfMapPtr()->voxel_size());
 
-    ROS_INFO_STREAM(verbose_);
-    verbose_ = true;
-    ROS_INFO_STREAM(robot_radius_);
-
     if (visualize_) {
         visualizer_.init(nh, nh_private);
         visualizer_.createPublisher("raw_path");

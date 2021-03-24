@@ -14,11 +14,6 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     nh_private.getParam("voxel_size", voxel_size_);
     nh_private.getParam("verbose_planner", verbose_);
 
-    ROS_INFO_STREAM(verbose_);
-    ROS_INFO_STREAM(visualize_);
-    verbose_ = true;
-    visualize_ = true;
-
     odom_sub_ = nh.subscribe("odometry", 1, &LocalPlanner::odometryCallback, this);
     command_pub_ = nh.advertise<geometry_msgs::PoseStamped>("command/pose", 1);
     activate_server_ = nh.advertiseService("activate", &LocalPlanner::activateCallback, this);
@@ -121,6 +116,7 @@ void LocalPlanner::run() {
             turn_msg.header.stamp = ros::Time::now();
 
             geometry_msgs::Quaternion orig = odometry_.pose.pose.orientation;
+            double orig_z = odometry_.pose.pose.position.z;
             turn_msg.pose.position = odometry_.pose.pose.position;
             double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(orig));
             auto new_yaw = mav_msgs::quaternionFromYaw(yaw + M_PI_2);
@@ -128,6 +124,7 @@ void LocalPlanner::run() {
             turn_msg.pose.orientation.y = new_yaw.y();
             turn_msg.pose.orientation.z = new_yaw.z();
             turn_msg.pose.orientation.w = new_yaw.w();
+            turn_msg.pose.position.z = 4.0;
 
             command_pub_.publish(turn_msg);
 
@@ -139,12 +136,14 @@ void LocalPlanner::run() {
             turn_msg.pose.orientation.y = new_yaw.y();
             turn_msg.pose.orientation.z = new_yaw.z();
             turn_msg.pose.orientation.w = new_yaw.w();
+            turn_msg.pose.position.z = 1.0;
             command_pub_.publish(turn_msg);
 
             ros::Duration(4.0).sleep();
             ros::spinOnce();
 
             turn_msg.pose.orientation = orig;
+            turn_msg.pose.position.z = orig_z;
             command_pub_.publish(turn_msg);
             ros::Duration(2.0).sleep();
             ros::spinOnce();
@@ -193,7 +192,7 @@ void LocalPlanner::run() {
             geometry_msgs::PoseStamped setpt;
 
             double curr_yaw = mav_msgs::yawFromQuaternion(target.orientation_W_B);
-            target.orientation_W_B = mav_msgs::quaternionFromYaw(std::max(M_PI - curr_yaw, curr_yaw - M_PI));
+            target.orientation_W_B = mav_msgs::quaternionFromYaw(curr_yaw - M_PI * 0.85);
 
             // double temp = target.orientation_W_B.z();
             // if (curr_yaw < 0) {
@@ -223,6 +222,11 @@ void LocalPlanner::run() {
                 if (checkForAbort(i, trajectory_)) {
                     if (verbose_) {
                         ROS_WARN("Aborting current trajectory...");
+                    }
+
+                    pathfinder_.findPath(start_odom.position_W, waypt);
+                    if (pathfinder_.getPath().size() > 0) {
+                        waypoint_queue_.push(waypt);
                     }
 
                     geometry_msgs::PoseStamped stop_pt;
