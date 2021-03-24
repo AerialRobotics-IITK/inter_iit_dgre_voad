@@ -34,11 +34,6 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: ""
-  - Class: mav_planning_rviz/PlanningPanel
-    Name: PlanningPanel
-    namespace: planner
-    odometry_topic: /mavros/local_position/odom
-    planner_name: /planner/voxblox_local_planner
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
