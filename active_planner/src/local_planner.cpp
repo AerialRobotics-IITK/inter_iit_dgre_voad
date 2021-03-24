@@ -131,7 +131,7 @@ void LocalPlanner::run() {
 
             command_pub_.publish(turn_msg);
 
-            ros::Duration(2.0).sleep();
+            ros::Duration(4.0).sleep();
             ros::spinOnce();
 
             new_yaw = mav_msgs::quaternionFromYaw(yaw - M_PI_2);
@@ -141,11 +141,14 @@ void LocalPlanner::run() {
             turn_msg.pose.orientation.w = new_yaw.w();
             command_pub_.publish(turn_msg);
 
-            ros::Duration(2.0).sleep();
+            ros::Duration(4.0).sleep();
             ros::spinOnce();
 
             turn_msg.pose.orientation = orig;
             command_pub_.publish(turn_msg);
+            ros::Duration(2.0).sleep();
+            ros::spinOnce();
+
         } else {
             
             if (verbose_) {
@@ -173,6 +176,10 @@ void LocalPlanner::run() {
         }
 
         visited_frontiers_[getHash(waypt)] = waypt;
+        for (auto frontier : frontiers_) {
+            visited_frontiers_[getHash(frontier.center)] = frontier.center;
+        }
+
         if (trajectory_.empty()) {
             if(verbose_){
                 ROS_INFO("Current frontier not feasible.");
@@ -180,13 +187,13 @@ void LocalPlanner::run() {
             }
         }
 
-        ros::Rate pub_rate(40);
+        ros::Rate pub_rate(20);
         for (auto i = 0; i < trajectory_.size(); i++) {
             auto target = trajectory_[i];
             geometry_msgs::PoseStamped setpt;
 
             double curr_yaw = mav_msgs::yawFromQuaternion(target.orientation_W_B);
-            target.orientation_W_B = mav_msgs::quaternionFromYaw(std::max(M_PI - curr_yaw, curr_yaw));
+            target.orientation_W_B = mav_msgs::quaternionFromYaw(std::max(M_PI - curr_yaw, curr_yaw - M_PI));
 
             // double temp = target.orientation_W_B.z();
             // if (curr_yaw < 0) {

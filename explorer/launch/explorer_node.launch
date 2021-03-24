@@ -6,6 +6,9 @@
 
     <include file="$(find active_planner)/launch/server.launch"/>
 
+    <node pkg="tf" type="static_transform_publisher" name="camera_link_transform" args="0 0 0 -1.57 0 -1.57 base_link camera_link_optical 100" />
+	<node pkg="broadcaster" type="iris_tf2_broadcaster" name="iris_tf2_broadcaster" output="screen"/> 	
+
     <!-- <group ns="$(arg quad_name)"> -->
         <node pkg="explorer" type="explorer_node" name="explorer_node" output="screen">
             <rosparam file="$(find explorer)/cfg/params.yaml" />
