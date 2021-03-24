@@ -1,6 +1,6 @@
 # Frontier Exploration Parameters
 
-visualize_frontier: true                           # whether to publish RViz visualizations
+visualize_frontier: false                           # whether to publish RViz visualizations
 accurate_frontiers: false                  # True: explicitly compute all frontier voxels
                                           # (may degrade performance),
                                           # False: estimate frontier voxels by checking only some neighbors (detection

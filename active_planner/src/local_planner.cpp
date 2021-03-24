@@ -119,7 +119,7 @@ void LocalPlanner::run() {
             double orig_z = odometry_.pose.pose.position.z;
             turn_msg.pose.position = odometry_.pose.pose.position;
             double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(orig));
-            auto new_yaw = mav_msgs::quaternionFromYaw(yaw + M_PI_2);
+            auto new_yaw = mav_msgs::quaternionFromYaw(yaw + M_PI * 0.8);
             turn_msg.pose.orientation.x = new_yaw.x();
             turn_msg.pose.orientation.y = new_yaw.y();
             turn_msg.pose.orientation.z = new_yaw.z();
@@ -131,7 +131,7 @@ void LocalPlanner::run() {
             ros::Duration(4.0).sleep();
             ros::spinOnce();
 
-            new_yaw = mav_msgs::quaternionFromYaw(yaw - M_PI_2);
+            new_yaw = mav_msgs::quaternionFromYaw(yaw - M_PI * 0.8);
             turn_msg.pose.orientation.x = new_yaw.x();
             turn_msg.pose.orientation.y = new_yaw.y();
             turn_msg.pose.orientation.z = new_yaw.z();
@@ -250,7 +250,7 @@ void LocalPlanner::run() {
 
                     break;
                 }
-                command_pub_.publish(setpt);
+                // command_pub_.publish(setpt);
                 pub_rate.sleep();
             }
 
