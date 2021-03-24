@@ -16,7 +16,7 @@ void ExplorerNode::init(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
     set_mode_client_ = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
     takeoff_client_ = nh.serviceClient<mavros_msgs::CommandTOL>("mavros/cmd/takeoff");
     planner_activate_client_ = nh.serviceClient<std_srvs::SetBool>("/activate");
-    planner_terminate_client_ = nh.serviceClient<std_srvs::Empty>("/shutdown");
+    planner_shutdown_client_ = nh.serviceClient<std_srvs::Empty>("/shutdown");
 
     ROS_WARN("Waiting for state publish");
     while (ros::ok() && state_sub_.getNumPublishers() == 0) {
@@ -43,7 +43,7 @@ void ExplorerNode::run() {
 
     //* Command for Landing
     if ((centre_.x != -1) && (centre_.y != -1) && (land_cmd_.response.success == false)) {
-        planner_activate_client_.call(planner_activate_cmd_);
+        planner_shutdown_client_.call(planner_shutdown_cmd_);
         land();
     }
 }
@@ -131,7 +131,7 @@ void ExplorerNode::land() {
             marker_status_.data = "Marker ID : 0, Landed";
             marker_status_pub_.publish(marker_status_);
             land_cmd_.response.success = true;
-        } else if (odom_.pose.pose.position.z <= 1) {
+        } else if (odom_.pose.pose.position.z <= 2) {
             if (fabs(pose_.x - odom_.pose.pose.position.x) <= 0.25 && fabs(pose_.y - odom_.pose.pose.position.y) <= 0.25) {
                 landing_client_.call(land_cmd_);
                 ROS_INFO_ONCE("Landing Called");

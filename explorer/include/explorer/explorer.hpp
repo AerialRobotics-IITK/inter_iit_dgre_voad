@@ -57,7 +57,7 @@ class ExplorerNode {
     ros::ServiceClient set_mode_client_;
     ros::ServiceClient takeoff_client_;
     ros::ServiceClient planner_activate_client_;
-    ros::ServiceClient planner_terminate_client_;
+    ros::ServiceClient planner_shutdown_client_;
 };
 
 }  // namespace interiit21::explorer
