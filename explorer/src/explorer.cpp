@@ -43,7 +43,11 @@ void ExplorerNode::run() {
 
     //* Command for Landing
     if ((centre_.x != -1) && (centre_.y != -1) && (land_cmd_.response.success == false)) {
-        planner_shutdown_client_.call(planner_shutdown_cmd_);
+        ros::Rate loop_rate(60);
+        for (int i = 0; i < 30; i++) {
+            planner_shutdown_client_.call(planner_shutdown_cmd_);
+            loop_rate.sleep();
+        }
         land();
     }
 }
@@ -117,22 +121,26 @@ void ExplorerNode::land() {
 
     while (land_cmd_.response.success == false) {
         //*Landing Algorithm
-        setpoint_.pose.position.x = pose_.x;
-        setpoint_.pose.position.y = pose_.y;
-        setpoint_.pose.position.z = odom_.pose.pose.position.z - 0.2; //*Vary this constant to change landing speed
-        setpoint_pub_.publish(setpoint_);
+
+        if ((centre_.x == -1) && (centre_.y == -1)) {
+            setpoint_.pose.position.z = odom_.pose.pose.position.z + 0.1;  //*Vary this constant to change landing speed
+            setpoint_pub_.publish(setpoint_);
+        } else {
+            setpoint_.pose.position.x = pose_.x;
+            setpoint_.pose.position.y = pose_.y;
+            setpoint_.pose.position.z = odom_.pose.pose.position.z - 0.15;  //*Vary this constant to change landing speed
+            setpoint_pub_.publish(setpoint_);
+        }
 
         rate.sleep();
         ros::spinOnce();
 
-        if (odom_.pose.pose.position.z <= 0.01) {   //! This if condition is not required hence height is 0.01
-            landing_client_.call(land_cmd_);
-            ROS_INFO_ONCE("Landing Called");
-            marker_status_.data = "Marker ID : 0, Landed";
-            marker_status_pub_.publish(marker_status_);
-            land_cmd_.response.success = true;
-        } else if (odom_.pose.pose.position.z <= 2) {
-            if (fabs(pose_.x - odom_.pose.pose.position.x) <= 0.25 && fabs(pose_.y - odom_.pose.pose.position.y) <= 0.25) {
+        if (odom_.pose.pose.position.z <= 10 && !(centre_.x == -1) && !(centre_.y == -1)) {
+            if (fabs(pose_.x - odom_.pose.pose.position.x) <= 0.15 && fabs(pose_.y - odom_.pose.pose.position.y) <= 0.15) {
+                setpoint_.pose.position.x = pose_.x;
+                setpoint_.pose.position.y = pose_.y;
+                setpoint_.pose.position.z = odom_.pose.pose.position.z;
+                setpoint_pub_.publish(setpoint_);
                 landing_client_.call(land_cmd_);
                 ROS_INFO_ONCE("Landing Called");
                 marker_status_.data = "Marker ID : 0, Landed";
