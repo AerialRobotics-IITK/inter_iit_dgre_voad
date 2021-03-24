@@ -12,6 +12,7 @@
 #include <detector_msgs/GlobalCoord.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
+#include <sensor_msgs/CameraInfo.h>
 
 #include <opencv2/aruco.hpp>
 #include <opencv2/highgui.hpp>
@@ -26,14 +27,18 @@ class BoxDetectorNode {
     void run();
 
   private:
-    void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+    void image1Callback(const sensor_msgs::ImageConstPtr& msg);
+    void image2Callback(const sensor_msgs::ImageConstPtr& msg);
     void findGlobalCoordinates();
     void detectArucoMarker();
     void odomCallback(const nav_msgs::Odometry& msg);
+    // void cameraInfoCallback(const sensor_msgs::CameraInfo& msg);
     void arrayToMatrixConversion();
 
-    ros::Subscriber img_sub_;
+    ros::Subscriber img1_sub_;
+    ros::Subscriber img2_sub_;
     ros::Subscriber odom_sub_;
+    ros::Subscriber camera_info_sub_;
     ros::Publisher centre_pub_;
     ros::Publisher global_coord_pub_;
     ros::Publisher contour_pub_;
@@ -43,6 +48,7 @@ class BoxDetectorNode {
     detector_msgs::GlobalCoord global_coord_;
     sensor_msgs::ImagePtr contour_msg;
     geometry_msgs::PoseStamped pose_;
+    sensor_msgs::CameraInfo camera_parameters_;
     
     Eigen::Matrix3d cameraToQuadMatrix;
     Eigen::Matrix3d quadOrientationMatrix;
@@ -51,6 +57,8 @@ class BoxDetectorNode {
     Eigen::Vector2d centre_;
 
     cv::Mat img_;
+    cv::Mat img1_;
+    cv::Mat img2_;
     cv::Mat outputImage;
     cv::Mat cameraMatrix;
     cv::Mat distCoeffs;
