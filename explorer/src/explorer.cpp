@@ -15,14 +15,23 @@ void ExplorerNode::init(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
     arming_client_ = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
     set_mode_client_ = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
     takeoff_client_ = nh.serviceClient<mavros_msgs::CommandTOL>("mavros/cmd/takeoff");
+    planner_activate_client_ = nh.serviceClient<std_srvs::SetBool>("/activate");
+    planner_terminate_client_ = nh.serviceClient<std_srvs::Empty>("/shutdown");
 
     ROS_WARN("Waiting for state publish");
     while (ros::ok() && state_sub_.getNumPublishers() == 0) {
         ros::Duration(0.2).sleep();
     }
     takeoff_cmd_.request.altitude = 2.5;
+    planner_activate_cmd_.request.data = true;
+
+    //* Initiate Takeoff
 
     takeoff();
+
+    //* Start Planner
+
+    planner_activate_client_.call(planner_activate_cmd_);
 }
 
 void ExplorerNode::run() {
@@ -34,6 +43,7 @@ void ExplorerNode::run() {
 
     //* Command for Landing
     if ((centre_.x != -1) && (centre_.y != -1) && (land_cmd_.response.success == false)) {
+        planner_activate_client_.call(planner_activate_cmd_);
         land();
     }
 }
@@ -109,19 +119,19 @@ void ExplorerNode::land() {
         //*Landing Algorithm
         setpoint_.pose.position.x = pose_.x;
         setpoint_.pose.position.y = pose_.y;
-        setpoint_.pose.position.z = odom_.pose.pose.position.z - 2; //*Vary this constant to change landing speed
+        setpoint_.pose.position.z = odom_.pose.pose.position.z - 0.2; //*Vary this constant to change landing speed
         setpoint_pub_.publish(setpoint_);
 
         rate.sleep();
         ros::spinOnce();
 
-        if (odom_.pose.pose.position.z <= 1) {
+        if (odom_.pose.pose.position.z <= 0.01) {   //! This if condition is not required hence height is 0.01
             landing_client_.call(land_cmd_);
             ROS_INFO_ONCE("Landing Called");
             marker_status_.data = "Marker ID : 0, Landed";
             marker_status_pub_.publish(marker_status_);
             land_cmd_.response.success = true;
-        } else if (odom_.pose.pose.position.z <= 2.5) {
+        } else if (odom_.pose.pose.position.z <= 1) {
             if (fabs(pose_.x - odom_.pose.pose.position.x) <= 0.25 && fabs(pose_.y - odom_.pose.pose.position.y) <= 0.25) {
                 landing_client_.call(land_cmd_);
                 ROS_INFO_ONCE("Landing Called");

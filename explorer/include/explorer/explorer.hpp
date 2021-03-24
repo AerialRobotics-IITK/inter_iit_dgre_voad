@@ -4,6 +4,8 @@
 #include <detector_msgs/GlobalCoord.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/String.h>
+#include <std_srvs/SetBool.h>
+#include <std_srvs/Empty.h>
 #include <mavros_msgs/CommandTOL.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
@@ -36,6 +38,8 @@ class ExplorerNode {
     mavros_msgs::SetMode offb_set_mode_;
     mavros_msgs::CommandTOL land_cmd_;
     mavros_msgs::CommandTOL takeoff_cmd_;
+    std_srvs::SetBool planner_activate_cmd_;
+    std_srvs::Empty planner_shutdown_cmd_;
 
     //*Subscribers
     ros::Subscriber pose_sub_;
@@ -52,6 +56,8 @@ class ExplorerNode {
     ros::ServiceClient arming_client_;
     ros::ServiceClient set_mode_client_;
     ros::ServiceClient takeoff_client_;
+    ros::ServiceClient planner_activate_client_;
+    ros::ServiceClient planner_terminate_client_;
 };
 
 }  // namespace interiit21::explorer
