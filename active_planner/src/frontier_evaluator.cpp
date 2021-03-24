@@ -129,7 +129,7 @@ void FrontierEvaluator::findNeighbours(const std::string& key, Frontier& frontie
     frontier.center = (frontier.center * frontier.points.size() + point) / (frontier.points.size() + 1);
     frontier.points.push_back(point);
 
-    for (auto& next_point : neighbor_voxels_) {
+    for (auto& next_point : planar_neighbor_voxels_) {
         auto neighbour_hash = getHash(point + next_point);
         if (hash_map_.find(neighbour_hash) != hash_map_.end()) {
             findNeighbours(neighbour_hash, frontier);
