@@ -194,16 +194,6 @@ void LocalPlanner::run() {
             double curr_yaw = mav_msgs::yawFromQuaternion(target.orientation_W_B);
             target.orientation_W_B = mav_msgs::quaternionFromYaw(curr_yaw - M_PI * 0.85);
 
-            // double temp = target.orientation_W_B.z();
-            // if (curr_yaw < 0) {
-            // target.orientation_W_B.z() = -target.orientation_W_B.w()
-            // target.orientation_W_B.w() = temp;
-            // } else  {
-            // target.orientation_W_B.z() = target.orientation_W_B.w();
-            // target.orientation_W_B.w() = -temp;
-            // }
-            // target.orientation_W_B.w() = -target.orientation_W_B.w();
-
             mav_msgs::msgPoseStampedFromEigenTrajectoryPoint(target, &setpt);
             command_pub_.publish(setpt);
 
@@ -214,7 +204,7 @@ void LocalPlanner::run() {
             ros::spinOnce();
             bool feasible = true;
 
-            while (ros::ok() && (norm(odometry_.pose.pose.position, convertEigenToGeometryMsg(target.position_W)) > robot_radius_)) {
+            while (ros::ok() && (norm(odometry_.pose.pose.position, convertEigenToGeometryMsg(target.position_W)) > robot_radius_) && !exit_) {
                 ros::spinOnce();
                 mav_msgs::EigenOdometry start_odom;
                 mav_msgs::eigenOdometryFromMsg(odometry_, &start_odom);
@@ -250,7 +240,7 @@ void LocalPlanner::run() {
 
                     break;
                 }
-                // command_pub_.publish(setpt);
+
                 pub_rate.sleep();
             }
 
