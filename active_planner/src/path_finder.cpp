@@ -2,6 +2,7 @@
 
 namespace local_planner {
 
+// Initialize point sampler
 void PointSampler::init(const Eigen::Vector3d& start, const Eigen::Vector3d& end) {
     region_ = Eigen::Vector3d(0.5, 1.0, 1.5);
     region_(0) += 0.5 * (end - start).norm();
@@ -12,6 +13,7 @@ void PointSampler::init(const Eigen::Vector3d& start, const Eigen::Vector3d& end
     rotation_.col(2) = rotation_.col(0).cross(rotation_.col(1));
 }
 
+// Generate random sample for graph
 Eigen::Vector3d PointSampler::getSample() {
     Eigen::Vector3d point;
     point(0) = dist_(engine_) * region_(0);
@@ -21,6 +23,7 @@ Eigen::Vector3d PointSampler::getSample() {
     return (rotation_ * point + translation_);
 }
 
+// Expand lateral region size for replanning
 void PointSampler::expandRegion(const double& size) {
     region_(1) += size;
 }
@@ -35,6 +38,7 @@ PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     , density_factor_(1.0)
     , inflate_radius_(false)
     , inflate_factor_(1.0) {
+    // Fetch parameters
     nh_private.getParam("robot_radius", robot_radius_);
     nh_private.getParam("visualize_path", visualize_);
     nh_private.getParam("num_neighbours", num_neighbours_);
@@ -42,6 +46,7 @@ PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
 
     voxel_size_ = double(server_.getEsdfMapPtr()->voxel_size());
 
+    // Register publishers for visualization
     if (visualize_) {
         visualizer_.init(nh, nh_private);
         visualizer_.createPublisher("raw_path");
@@ -49,6 +54,7 @@ PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
         visualizer_.createPublisher("short_path");
     }
 
+    // Precalculate relative vectors for calculating neighbours
     auto vs = voxel_size_;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
@@ -62,9 +68,11 @@ PathFinder::PathFinder(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     }
 }
 
+// Calcualte path between given waypoints
 void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt) {
     path_.clear();
-    
+
+    // Paths are not close enough
     if ((start_pt - end_pt).norm() < voxel_size_) {
         path_.push_back(start_pt);
         path_.push_back(end_pt);
@@ -85,6 +93,7 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
             ROS_WARN("Plan failed! Adding more nodes!");
         }
 
+        // Increase points and region to replan
         increaseSamplingDensity(4.0);
         expandSamplingRegion(2.0);
         createGraph(start_pt, end_pt);
@@ -100,7 +109,8 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
             if(verbose_){
                 ROS_WARN("Planning to nearest point!");
             }
-            
+
+            // Get nearest point if end node is not feasible
             double end_distance = (start_pt - end_pt).norm();
             for (auto& node : graph_) {
                 double distance = (end_pt - node->getPosition()).norm();
@@ -137,6 +147,7 @@ void PathFinder::findPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d
     }
 }
 
+// Generate graph
 void PathFinder::createGraph(const Eigen::Vector3d& start, const Eigen::Vector3d& end) {
     graph_.clear();
     sampler_.init(start, end);
@@ -166,6 +177,7 @@ void PathFinder::createGraph(const Eigen::Vector3d& start, const Eigen::Vector3d
     graph_.push_back(Node(new GraphNode(end, 1)));
 
     uint node_id = 2;
+    // Add nodes
     while (num_sample++ < max_samples) {
         Eigen::Vector3d sample = sampler_.getSample();
         double distance = 0.0;
@@ -175,11 +187,13 @@ void PathFinder::createGraph(const Eigen::Vector3d& start, const Eigen::Vector3d
     }
 
     tree_.clear();
+    // Construct KD-Tree to build edges
     for (auto& node : graph_) {
         Point pt = Point(node->getPosition().x(), node->getPosition().y(), node->getPosition().z());
         tree_.insert(std::make_pair(pt, node->getID()));
     }
 
+    // Add edges
     for (auto& node : graph_) {
         std::vector<Value> neighbours;
         Point pt = Point(node->getPosition().x(), node->getPosition().y(), node->getPosition().z());
@@ -192,6 +206,7 @@ void PathFinder::createGraph(const Eigen::Vector3d& start, const Eigen::Vector3d
     }
 }
 
+// Run A* on graph to find path
 void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
     raw_path_.clear();
     if (graph_.empty()) {
@@ -216,6 +231,7 @@ void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
         Eigen::Vector3d curr_pos = graph_[curr_index]->getPosition();
         open_set.pop();
 
+        // Return the path - backtracking
         if (curr_index == end_index) {
             Path curr_path;
             while (parent[curr_index] != INT_MAX) {
@@ -223,7 +239,6 @@ void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
                 curr_index = parent[curr_index];
             }
 
-            // curr_path.push_back(graph_[start_index]->getPosition());
             std::reverse(curr_path.begin(), curr_path.end());
             raw_path_ = curr_path;
             return;
@@ -243,6 +258,7 @@ void PathFinder::searchPath(const uint& start_index, const uint& end_index) {
     }
 }
 
+// Path shortener - reduce number of waypoints
 void PathFinder::shortenPath() {
     short_path_.clear();
     if (raw_path_.empty()) {
@@ -257,6 +273,7 @@ void PathFinder::shortenPath() {
     }
 }
 
+// Delete intermediate waypoints if start and end path is clear
 void PathFinder::findMaximalIndices(const uint& start, const uint& end) {
     if (start >= end || start >= retain_.size() || end >= retain_.size()) {
         return;
@@ -281,6 +298,7 @@ void PathFinder::findMaximalIndices(const uint& start, const uint& end) {
     }
 }
 
+// Check if line between start and end is feasible
 bool PathFinder::isLineInCollision(const Eigen::Vector3d& start, const Eigen::Vector3d& end) {
     double distance = (end - start).norm();
     if (distance < voxel_size_) {
@@ -308,6 +326,7 @@ bool PathFinder::isLineInCollision(const Eigen::Vector3d& start, const Eigen::Ve
     return false;
 }
 
+// Helper function to calculate path length
 double PathFinder::getPathLength(const Path& path) {
     double length = 0.0;
     for (int i = 0; i < path.size() - 1; i++) {
@@ -316,6 +335,7 @@ double PathFinder::getPathLength(const Path& path) {
     return length;
 }
 
+// ESDF helper function
 double PathFinder::getMapDistanceAndGradient(const Eigen::Vector3d& position, Eigen::Vector3d* gradient) {
     double distance = 0.0;
     const bool kInterpolate = false;
@@ -340,6 +360,7 @@ void PathFinder::inflateRadius(const double& factor) {
     inflate_factor_ = factor;
 }
 
+// Visualizer helper function
 rviz_visualizer::Graph PathFinder::convertGraph(const Graph& graph) {
     rviz_visualizer::Graph ret_graph;
     for (auto& node : graph) {

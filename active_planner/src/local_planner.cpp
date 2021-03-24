@@ -9,6 +9,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     , exit_(false)
     , verbose_(false)
     , const_yaw_(3.14) {
+    // Load Parameters
     nh_private.getParam("visualize_planner", visualize_);
     nh_private.getParam("robot_radius", robot_radius_);
     nh_private.getParam("voxel_size", voxel_size_);
@@ -19,6 +20,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     activate_server_ = nh.advertiseService("activate", &LocalPlanner::activateCallback, this);
     exit_server_ = nh.advertiseService("shutdown", &LocalPlanner::exitCallback, this);
 
+    // Register parameters for visualization
     if (visualize_) {
         visualizer_.init(nh, nh_private);
         visualizer_.createPublisher("occupied_path");
@@ -27,6 +29,7 @@ LocalPlanner::LocalPlanner(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     }
 }
 
+// Helper function to convert Eigen::Vector3d to geometry point
 geometry_msgs::Point LocalPlanner::convertEigenToGeometryMsg(const Eigen::Vector3d& point) {
     geometry_msgs::Point point_msg;
 
@@ -37,33 +40,33 @@ geometry_msgs::Point LocalPlanner::convertEigenToGeometryMsg(const Eigen::Vector
     return point_msg;
 }
 
+// Evaluate frontiers
 Eigen::Vector3d LocalPlanner::getBestFrontier() {
     geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
-    // mav_msgs::EigenOdometry start_odom;
-    // mav_msgs::eigenOdometryFromMsg(odometry_, &start_odom);
     double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
     double max_distance = DBL_MIN;
     Eigen::Vector3d best_f = Eigen::Vector3d::Zero();
     for (auto frontier : frontiers_) {
         Eigen::Vector3d vector = (frontier.center - Eigen::Vector3d(curr_pos.x, curr_pos.y, curr_pos.z));
-        double distance = std::cos(yaw) * vector.x() + std::sin(yaw) * vector.y() - std::fabs(vector.z());
+        // Frontier with max distance along yaw is best
+        double distance = std::cos(yaw) * vector.x() + std::sin(yaw) * vector.y() - std::fabs(vector.z()); 
         if (distance > max_distance) {
-            // pathfinder_.findPath(start_odom, frontier.center);
-            // Path f_path = pathfinder_.getPath();
+            // Fetch only new frontiers
             if (visited_frontiers_.find(getHash(frontier.center)) == visited_frontiers_.end()) {
-                // if(f_path.size() > 0){
                 max_distance = distance;
                 best_f = frontier.center;
-                // }
             }
         }
     }
+
+    // Cache all frontiers
     for (auto& frontier : frontiers_) {
         frontier_cache_.push_back(frontier);
     }
     return best_f;
 }
 
+// Get frontier from cache if required
 Eigen::Vector3d LocalPlanner::getBestFrontierFromCache() {
     geometry_msgs::Point curr_pos = odometry_.pose.pose.position;
     double yaw = mav_msgs::yawFromQuaternion(mav_msgs::quaternionFromMsg(odometry_.pose.pose.orientation));
@@ -88,6 +91,7 @@ Eigen::Vector3d LocalPlanner::getBestFrontierFromCache() {
     return best_f;
 }
 
+// Main function
 void LocalPlanner::run() {
     frontiers_.clear();
     trajectory_.clear();
@@ -100,12 +104,13 @@ void LocalPlanner::run() {
         if (verbose_){
             ROS_INFO_STREAM("Found " << frontiers_.size() << " frontiers");
         }
-        
-        Eigen::Vector3d waypoint = getBestFrontier();
+
+        Eigen::Vector3d waypoint = getBestFrontier();  // Fetch best frontier
         if(verbose_){
             ROS_WARN_STREAM(waypoint.norm());
         }
 
+        // No good frontier found
         if(waypoint.norm() < voxel_size_){
             if (verbose_) {
                 ROS_WARN("No explorable frontier! Spinning around once.");
@@ -155,7 +160,7 @@ void LocalPlanner::run() {
             }
             waypoint_queue_.push(waypoint);
         }
-    } else {
+    } else {  // Process first waypoint
         Eigen::Vector3d waypt = waypoint_queue_.top();
         waypoint_queue_.pop();
 
@@ -166,6 +171,7 @@ void LocalPlanner::run() {
         frontier_path_.clear();
         trajectory_.clear();
 
+        // Find path to waypoint
         pathfinder_.findPath(start_odom.position_W, waypt);
         frontier_path_ = pathfinder_.getPath();
         trajectory_ = generateTrajectoryThroughWaypoints(frontier_path_);
@@ -174,6 +180,7 @@ void LocalPlanner::run() {
             ROS_INFO_STREAM("Generated " << trajectory_.size() << " waypoints");
         }
 
+        // Mark all frontiers as seen
         visited_frontiers_[getHash(waypt)] = waypt;
         for (auto frontier : frontiers_) {
             visited_frontiers_[getHash(frontier.center)] = frontier.center;
@@ -186,13 +193,14 @@ void LocalPlanner::run() {
             }
         }
 
+        // Track trajectory to current waypoint
         ros::Rate pub_rate(20);
         for (auto i = 0; i < trajectory_.size(); i++) {
             auto target = trajectory_[i];
             geometry_msgs::PoseStamped setpt;
 
             double curr_yaw = mav_msgs::yawFromQuaternion(target.orientation_W_B);
-            target.orientation_W_B = mav_msgs::quaternionFromYaw(curr_yaw - M_PI * 0.85);
+            target.orientation_W_B = mav_msgs::quaternionFromYaw(curr_yaw - M_PI * 0.85);  // Account for initila yaw offset
 
             mav_msgs::msgPoseStampedFromEigenTrajectoryPoint(target, &setpt);
             command_pub_.publish(setpt);
@@ -204,6 +212,7 @@ void LocalPlanner::run() {
             ros::spinOnce();
             bool feasible = true;
 
+            // Wait to reach to waypoint
             while (ros::ok() && (norm(odometry_.pose.pose.position, convertEigenToGeometryMsg(target.position_W)) > robot_radius_) && !exit_) {
                 ros::spinOnce();
                 mav_msgs::EigenOdometry start_odom;
@@ -214,6 +223,7 @@ void LocalPlanner::run() {
                         ROS_WARN("Aborting current trajectory...");
                     }
 
+                    // Check if replan is possible
                     pathfinder_.findPath(start_odom.position_W, waypt);
                     if (pathfinder_.getPath().size() > 0) {
                         waypoint_queue_.push(waypt);
@@ -230,6 +240,7 @@ void LocalPlanner::run() {
                     trajectory_.clear();
                     frontier_path_.clear();
 
+                    // Fetch a new waypoint right here
                     Eigen::Vector3d waypoint = getBestFrontier();
                     if(waypoint.norm() > voxel_size_){
                         if (verbose_) {
@@ -244,6 +255,7 @@ void LocalPlanner::run() {
                 pub_rate.sleep();
             }
 
+            // Discard current frontier
             if (!feasible) {
                 trajectory_.clear();
                 frontier_path_.clear();
@@ -264,12 +276,14 @@ void LocalPlanner::run() {
     }
 }
 
+// Check if current trajectory gets an obstacle in between
 bool LocalPlanner::checkForAbort(const uint i, Trajectory& trajectory){
     bool need_abort = false;
     uint occupied = 0;
 
     std::vector<Eigen::Vector3d> free_points, occ_points;
 
+    // Lookahead for 4 waypoints
     double distance = 0.0;
     for (auto j = i; j < (i+4) && j < trajectory.size(); j++) {
         if (pathfinder_.getMapDistance(trajectory[j].position_W, distance) && distance < robot_radius_) {
@@ -282,7 +296,7 @@ bool LocalPlanner::checkForAbort(const uint i, Trajectory& trajectory){
         }
     }
 
-    need_abort = (occupied > 0); 
+    need_abort = (occupied > 0);  // At least one point is occupied - abort
 
     if (visualize_) {
         visualizer_.visualizePoints("occupied_path", occ_points, "map", Visualizer::ColorType::RED, 1);
@@ -292,6 +306,7 @@ bool LocalPlanner::checkForAbort(const uint i, Trajectory& trajectory){
     return need_abort;
 }
 
+// Build trajectory
 Trajectory LocalPlanner::generateTrajectoryThroughWaypoints(const Path& waypoints) {
     Trajectory traj;
     if (waypoints.empty()) {
@@ -311,6 +326,7 @@ Trajectory LocalPlanner::generateTrajectoryThroughWaypoints(const Path& waypoint
     return traj;
 }
 
+// Apply yaw to trajectory waypoints as per policy
 void LocalPlanner::applyYawToTrajectory(Trajectory& trajectory, const YawPolicy& policy) {
     if (trajectory.size() < 2) {
         return;

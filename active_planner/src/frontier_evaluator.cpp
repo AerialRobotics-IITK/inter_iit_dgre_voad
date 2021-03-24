@@ -4,6 +4,8 @@ namespace local_planner {
 
 FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
     : esdf_server_(nh, nh_private) {
+    // Load Parameters
+
     nh_private.getParam("accurate_frontiers", accurate_frontiers_);
     nh_private.getParam("checking_distance", checking_dist_);
     nh_private.getParam("visualize_frontier", visualize_);
@@ -20,8 +22,9 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
     voxel_size_ = esdf_server_.getTsdfMapPtr()->voxel_size();
     block_size_ = esdf_server_.getTsdfMapPtr()->block_size();
 
+    // Precompute relative vectors for calculating neighbours
     auto vs = voxel_size_ * checking_dist_;
-    if (!accurate_frontiers_) {
+    if (!accurate_frontiers_) {  // Consider only 6 neighbours along the 3 axes
         neighbor_voxels_.push_back(Eigen::Vector3d(vs, 0, 0));
         neighbor_voxels_.push_back(Eigen::Vector3d(-vs, 0, 0));
         neighbor_voxels_.push_back(Eigen::Vector3d(0, vs, 0));
@@ -29,7 +32,7 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
         neighbor_voxels_.push_back(Eigen::Vector3d(0, 0, vs));
         neighbor_voxels_.push_back(Eigen::Vector3d(0, 0, -vs));
 
-    } else {
+    } else {// Consider all 27 neighbours in 3D space
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
                 for (int k = -1; k <= 1; k++) {
@@ -41,7 +44,8 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
             }
         }
     }
-
+    
+    // Relative vectors for 4 neighbours in the plane
     for (int i = -2; i <= 2; i++) {
         for (int j = -2; j <= 2; j++) {
             if ((abs(i) + abs(j)) == 0) {
@@ -51,6 +55,7 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
         }
     }
 
+    // Register publishers for visualization
     if (visualize_) {
         visualizer_.init(nh, nh_private);
         visualizer_.createPublisher("free_voxels");
@@ -61,6 +66,7 @@ FrontierEvaluator::FrontierEvaluator(ros::NodeHandle& nh, ros::NodeHandle& nh_pr
     }
 }
 
+// Find all frontiers
 void FrontierEvaluator::findFrontiers() {
     frontiers_.clear();
     hash_map_.clear();
@@ -71,6 +77,7 @@ void FrontierEvaluator::findFrontiers() {
     voxblox::BlockIndexList blocks;
     esdf_server_.getTsdfMapPtr()->getTsdfLayerPtr()->getAllAllocatedBlocks(&blocks);
 
+    // Iterate over TSDF map to get frontier voxels
     for (const auto& index : blocks) {
         const voxblox::Block<voxblox::TsdfVoxel>& block = esdf_server_.getTsdfMapPtr()->getTsdfLayerPtr()->getBlockByIndex(index);
 
@@ -83,6 +90,7 @@ void FrontierEvaluator::findFrontiers() {
         }
     }
 
+    // Clustering frontier points
     while (!hash_map_.empty()) {
         Frontier frontier;
         findNeighbours(hash_map_.begin()->first, frontier);
@@ -93,6 +101,7 @@ void FrontierEvaluator::findFrontiers() {
         frontiers_.push_back(frontier);
     }
 
+    // Visualization functions
     if (visualize_) {
         visualizeFrontierPoints();
         visualizeFrontierCenters();
@@ -100,6 +109,7 @@ void FrontierEvaluator::findFrontiers() {
     }
 }
 
+// Retrieve frontier centers
 std::vector<FrontierEvaluator::FrontierCenter> FrontierEvaluator::getFrontiers() {
     std::vector<FrontierEvaluator::FrontierCenter> centers;
 
@@ -111,6 +121,7 @@ std::vector<FrontierEvaluator::FrontierCenter> FrontierEvaluator::getFrontiers()
     return centers;
 }
 
+// Recursively find frontier neighbours to create frontier clusters
 void FrontierEvaluator::findNeighbours(const std::string& key, Frontier& frontier) {
     auto point = hash_map_.at(key);
     hash_map_.erase(key);
@@ -118,7 +129,7 @@ void FrontierEvaluator::findNeighbours(const std::string& key, Frontier& frontie
     frontier.center = (frontier.center * frontier.points.size() + point) / (frontier.points.size() + 1);
     frontier.points.push_back(point);
 
-    for (auto& next_point : planar_neighbor_voxels_) {
+    for (auto& next_point : neighbor_voxels_) {
         auto neighbour_hash = getHash(point + next_point);
         if (hash_map_.find(neighbour_hash) != hash_map_.end()) {
             findNeighbours(neighbour_hash, frontier);
@@ -126,6 +137,7 @@ void FrontierEvaluator::findNeighbours(const std::string& key, Frontier& frontie
     }
 }
 
+// Check if current voxel is a frontier
 bool FrontierEvaluator::isFrontierVoxel(const Eigen::Vector3d& voxel) {
     if (getVoxelState(voxel) != VoxelState::FREE) {
         return false;
@@ -143,9 +155,10 @@ bool FrontierEvaluator::isFrontierVoxel(const Eigen::Vector3d& voxel) {
         }
     }
 
-    return (num_unknown > 1);
+    return (num_unknown > 1);   // Frontier - free point with more than one unknown neighbour
 }
 
+// Check if current voxel is occupied, free or unknown
 VoxelState FrontierEvaluator::getVoxelState(const Eigen::Vector3d& point) {
     double distance = 0.0, weight = 0.0;
     if (getVoxelDistance(point, distance) && getVoxelWeight(point, weight)) {
@@ -161,6 +174,7 @@ VoxelState FrontierEvaluator::getVoxelState(const Eigen::Vector3d& point) {
     }
 }
 
+// TSDF Helper function
 bool FrontierEvaluator::getVoxelDistance(const Eigen::Vector3d& point, double& distance) {
     voxblox::Point voxblox_point(point.x(), point.y(), point.z());
     voxblox::Block<voxblox::TsdfVoxel>::Ptr block_ptr = esdf_server_.getTsdfMapPtr()->getTsdfLayerPtr()->getBlockPtrByCoordinates(voxblox_point);
@@ -175,6 +189,7 @@ bool FrontierEvaluator::getVoxelDistance(const Eigen::Vector3d& point, double& d
     return false;
 }
 
+// TSDF helper function
 bool FrontierEvaluator::getVoxelWeight(const Eigen::Vector3d& point, double& weight) {
     voxblox::Point voxblox_point(point.x(), point.y(), point.z());
     voxblox::Block<voxblox::TsdfVoxel>::Ptr block_ptr = esdf_server_.getTsdfMapPtr()->getTsdfLayerPtr()->getBlockPtrByCoordinates(voxblox_point);
@@ -189,6 +204,7 @@ bool FrontierEvaluator::getVoxelWeight(const Eigen::Vector3d& point, double& wei
     return false;
 }
 
+// Visualize free, occupied and unknown voxels
 void FrontierEvaluator::visualizeVoxelStates() {
     if (!visualize_) {
         return;
@@ -227,6 +243,7 @@ void FrontierEvaluator::visualizeVoxelStates() {
     visualizer_.visualizePoints("occupied_voxels", occupied_voxels, frame_id_, Visualizer::ColorType::PURPLE);
 }
 
+// Visualize frontiers
 void FrontierEvaluator::visualizeFrontierPoints() {
     if (!visualize_) {
         return;
